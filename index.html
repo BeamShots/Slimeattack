@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#10172c"><meta name="description" content="Tap, evolve and unleash a storm of slime-shattering powers."><link rel="manifest" href="./manifest.json"><link rel="icon" href="./icon192.png"><link rel="stylesheet" href="./style.css"><title>Slimefall · Wild Ascension</title></head>
+<body><main id="app">
+<header><div class="brand">SLIMEFALL<small>WILD ASCENSION</small></div><div class="wallet"><span id="coins">0</span><span id="shards">0</span></div><button id="settings" class="iconButton" aria-label="Settings">⚙</button></header>
+<section id="home" class="screen active">
+<div class="homeHero"><div class="eyebrow">THE SWARM IS COMING</div><h1>Small slime.<br>Unthinkable power.</h1><div class="heroSlime enemySprite" aria-hidden="true"></div><p>Tap or hold. Stack powers.<br>Become the storm.</p><button id="play" class="primary">BEGIN A RUN <span>→</span></button><button id="resume" hidden>Continue your run</button><div id="homeStats" class="homeStats"></div></div>
+<div class="homeBottom"><div class="idlePanel frame"><div class="row"><span class="skillIcon" data-icon="11"></span><div><h3>Gel sanctuary</h3><p id="idleInfo"></p></div><button id="claimIdle" class="primary">Collect</button></div></div><nav id="homeNav"><button data-page="workshop">⚒<span>Upgrade</span></button><button data-page="collection">✦<span>Grimoire</span></button><button data-page="milestones">♛<span>Milestones</span></button></nav></div>
+</section>
+<section id="combat" class="screen">
+<div class="battleHud"><div class="row"><span id="waveLabel"></span><button id="buildInfo" class="tiny">Your build</button><button id="pause" class="tiny" aria-label="Pause">Ⅱ</button></div><div class="row"><span id="health"></span><span id="battleStats"></span></div><div class="progress"><i id="waveProgress"></i></div></div>
+<div id="arena"><canvas id="battleCanvas" aria-label="Slime battlefield. Tap or hold enemies to attack."></canvas><div id="battleBanner" role="status"></div><div id="combo"></div><div class="dangerLine">KEEP THEM ABOVE THE WARD</div></div>
+<div class="abilities"><button id="frost" class="ability"><span class="skillIcon" data-icon="4"></span><span><b>Frost nova</b><small id="frostLabel">READY</small></span></button><button id="fury" class="ability"><span class="skillIcon" data-icon="2"></span><span><b>Overcharge</b><small id="furyLabel">READY</small></span></button></div>
+<div id="petStatus" class="petStatus">Your spirit companion attacks automatically</div>
+</section>
+<section id="page" class="screen"><div class="pageHeading"><button id="back">← Home</button><h2 id="pageTitle"></h2></div><div id="pageContent"></div></section>
+<div id="draftOverlay" class="overlay" hidden><div class="draftHeader"><div class="eyebrow" id="draftWave"></div><h2>Choose your evolution</h2><p>These powers stack for this run.</p></div><div id="draftCards"></div><div class="draftFooter"><button id="reroll">↻ Reroll · 1 free</button><button id="draftHome">Save & home</button></div></div>
+</main>
+<dialog id="dialog"><div class="dialogHeading"><h2 id="dialogTitle"></h2><button id="closeDialog" class="iconButton" aria-label="Close">×</button></div><div id="dialogContent"></div></dialog><div id="toast" role="status"></div><input type="file" id="import" accept=".json,application/json" hidden>
+<script src="./engine.js"></script><script src="./app.js"></script></body></html>

@@ -39,3 +39,9 @@ dialog{color:var(--white);width:min(94vw,470px);max-height:85dvh;padding:6px 8px
 .shake{animation:shake .2s}@keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 @media(max-height:730px){header{height:49px}.brand{font-size:18px}.homeHero{padding:9px 15px 4px}.homeHero h1{font-size:27px;margin:6px 0}.heroSlime{width:125px}.homeHero p{font-size:10px;margin-bottom:7px}#play{padding:11px 17px;min-height:42px}.homeStats{margin-top:8px}.idlePanel{margin-bottom:6px}.homeBottom{padding-top:4px}.upgradeCard{min-height:108px;padding:7px}.upgradeCard .skillIcon{width:55px;height:55px}.upgradeCard h3{font-size:19px}.draftHeader{padding-bottom:8px}.draftHeader h2{font-size:24px}#draftCards{gap:7px}.abilities{padding-top:5px}.ability{min-height:49px}.petStatus{padding-bottom:4px}}
 @media(prefers-reduced-motion:reduce){.heroSlime,.upgradeCard.legendary,.shake{animation:none}}
+.realmInfo{font-size:9px;letter-spacing:.5px;color:#cbb2e5;margin-top:6px}
+#arena[data-realm="1"]{background:linear-gradient(#0c0d2511,#0b122a22),url('./biomes.webp') 0 50% / 300% 100%}
+#arena[data-realm="2"]{background:linear-gradient(#0c0d2511,#0b122a22),url('./biomes.webp') 50% 50% / 300% 100%}
+#arena[data-realm="3"]{background:linear-gradient(#0c0d2511,#0b122a22),url('./biomes.webp') 100% 50% / 300% 100%}
+.enemyPortrait{display:block;width:90px;height:90px;background-repeat:no-repeat;margin:0 auto}
+#homeNav button{font-size:18px;padding:7px 3px}#homeNav span{font-size:9px}

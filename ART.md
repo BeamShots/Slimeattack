@@ -9,3 +9,12 @@ forest.webp — a portrait bioluminescent forest clearing, turquoise streams, mu
 icon192.png and icon512.png — app icons derived from the generated companion sprite.
 
 Sound effects and optional ambient chords are synthesized by the game with Web Audio. They are generated in code rather than stored audio recordings.
+
+# Riftbound expansion art
+Generated using the built-in image-generation tool, then aligned into isolated cells for runtime sampling.
+enemies2.webp — transparent 4×3 atlas prompted with healer, mirror, splitter, teleporter, burrower, shield sentinel, storm caller, vampire leech, mushroom queen, lava knight, cosmic sovereign and treasure mimic. Distinct silhouettes, glossy hand-painted pixel style.
+icons2.webp — transparent 4×3 atlas prompted with moon blades, laser prism, thunder cloud, returning glaive, frost mines, singularity, phoenix feather, thorn crown, curse skull, infinity blade, time hourglass and resonant heart.
+effects.webp — transparent 2×2 effect atlas prompted with a face-on black hole and luminous accretion disk, cyan rune circle, gold explosive sunburst and green poison-cloud ring. Combined with procedural particles, lines and transforms.
+biomes.webp — three equal portrait battlefields in one horizontal atlas. Prompt requested mushroom bog, volcanic forge and astral ruins with uncluttered dark central combat space.
+
+All images are local files beside the scripts. No art or sound service is called during play.

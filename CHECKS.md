@@ -1,14 +1,15 @@
-# Build verification
+# Riftbound v2 verification
+93 automated checks passed:
+- 36 original engine checks, rerun against v2.
+- 24 expansion checks covering v1 wave-45 migration; new cards, prerequisites and late draft guarantees; boss and realm rotation; all wave conditions; splitting/minion accounting; mini recursion prevention; healer pulses; mirror hits; sentinel protection; blink/burrow/haste/leech behaviours; boss summons/dashes/rifts; automatic blades/lasers/thunder; glaives and resonance; mines; lasting vortex pull and collapse; limited revivals; thorns, curses, infinity scaling, power duration and saved mines/elites.
+- 26 simulated-DOM interaction checks covering home, combat, pointer/hold/release controls, cooldowns, cards/drafts, save/home/resume, permanent upgrades, collection, milestones, idle claims, settings, imports/exports, confirmed reset, field guide, new icon mapping, realm information and rendering all added effects with actual generated textures.
+- 3 early progression simulations reached wave 31.
+- 3 later progression simulations started at wave 41 with a plausible developed v1 build and reached wave 101 in 770–798 simulated seconds. Each encountered 19 enemy types and selected all 12 expansion cards. They used 5 simulated taps per second and activated ready powers. They repeatedly checked save/load, accounting, entity caps and finite values.
+- 1 audio graph check covers seventeen sound envelopes, ambient notes, oscillator cleanup and mute.
 
-63 automated checks passed:
-- 36 engine checks cover all eighteen cards and their interactions, manual and automatic attacks, critical hits, poison, chain damage, shatter, echoes, familiars, meteors, vortex, execute, healing, low-health damage, currencies, boss rewards, wave transitions, early/boss rarity guarantees, reroll limits, permanent purchases, milestones, save validation, run recovery, idle accrual and caps.
-- 23 simulated-DOM interaction checks cover starting/resuming runs, tapping/holding/releasing, ability controls, pause/resume, build inspection, card rendering and selection, draft rerolls and persistence, new-run confirmation, workshop purchases, grimoire, milestones, idle collection, settings, export/import, reset confirmation, defeat navigation and rendering battle effects.
-- 3 longer simulated runs reached wave 31 with different builds. These used three levels each of blade/companion and two levels of ward upgrades, simulated 6.7 taps per second, and automatically activated ready powers. They reached wave 31 in roughly 397–407 seconds, with 885 kills each. Run serialization was checked repeatedly.
-- 1 audio-graph check covers eleven effect envelopes, ambient notes, oscillator cleanup and mute.
-
-Additional checks verify every cached runtime file, cache installation/activation, root and app-file cache responses, non-GET bypass, JavaScript syntax, local file references and ZIP integrity.
-The generated enemy atlas was aligned into isolated cells after inspecting a canvas-rendered scene, correcting neighbouring sprite bleed.
+Additional checks verify all cached files exist, install/activate/cache response logic, non-GET bypass, JavaScript syntax, flat local references and ZIP integrity.
+A synthetic v1 wave-45 save with 15,297 coins, 8 crystals, an injured boss and existing cards retains those values under v2.
+Enemy, card and effect atlases were aligned into isolated cells. A native-canvas scene using the real generated art was visually inspected.
 
 Limitations:
-UI interactions ran in a simulated DOM, with the actual generated sprites and a native canvas for battle rendering. Full browser layout, physical phone controls, actual device audio, Android installation and a real service-worker offline reload have not been verified on a phone. The earlier local browser environment could not launch Chromium, and the remote browser disallows local-file previews.
-The game is not claimed to be bug-free.
+Interaction tests use a simulated DOM and native canvas. These are not a physical-phone playtest. Full browser layout, device audio and vibration, Android installation, real browser offline reload and phone frame rate remain unverified. The build is not claimed to be bug-free.

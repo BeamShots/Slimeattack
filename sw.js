@@ -1,5 +1,5 @@
-const CACHE='slimefall-wild-ascension-v1.0.0';
-const FILES=['./','./index.html','./style.css','./engine.js','./app.js','./manifest.json','./enemies.webp','./icons.webp','./frame.webp','./forest.webp','./icon192.png','./icon512.png'];
+const CACHE='slimefall-riftbound-v2.0.0';
+const FILES=['./','./index.html','./style.css','./engine.js','./app.js','./manifest.json','./enemies.webp','./icons.webp','./frame.webp','./forest.webp','./icon192.png','./icon512.png','./enemies2.webp','./icons2.webp','./effects.webp','./biomes.webp'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{

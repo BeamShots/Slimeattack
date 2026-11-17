@@ -1,49 +1,56 @@
-# Slimefall · Riftbound v2
+# Slimefall · Soul Rush v3
 
-An expansion of Wild Ascension. Same save key, same permanent progress, active runs resume.
+An active-combat update to Riftbound. Same save key, same permanent progress and resumable runs.
 
-## Upload on mobile
-Extract the ZIP. Upload ALL files together at the root of your existing GitHub Pages repository, replacing matching names. No folders and no build tools are needed.
-There are eight WebP files now. Upload enemies2.webp, icons2.webp, effects.webp and biomes.webp alongside the original files.
-Open the same website online after deployment. Close and reopen if the old version is still shown while the service worker updates. Your existing island/Tideforge saves are separate and are not changed.
-For an extra backup, export your Slimefall save in Settings before updating.
-Install through Android Chrome → browser menu → Install app / Add to home screen.
-An online visit caches the game and all its art for later offline play.
+## Mobile upload
+Extract this ZIP. Upload ALL files together at the root of the SAME GitHub Pages repository, replacing matching names. No folders or build tools are needed.
+Include enemies3.webp and icons3.webp alongside the original files. There are now ten WebP art files.
+Load the same website online after deployment, then close and reopen if the previous cached version is still shown.
+An online visit caches all game files for later offline play.
+Export your Slimefall save in Settings first if you want an extra backup.
+Install through the browser menu → Install app / Add to home screen.
 
-## Riftbound additions
-- 12 new illustrated enemy types. Bloom medics heal allies, mirror prisms block their first three direct hits, brood slimes split, rift skippers teleport, burrowers resist damage underground, sentinels protect allies, storm callers speed up the swarm and blood leeches regenerate and cost two hearts on escape.
-- New Spore Queen, Cinder Knight and Astral Sovereign bosses, plus the treasure mimic. Five bosses rotate in order every five waves.
-- Four realms rotate every ten waves. Three new generated battlefields join the original glade.
-- Five wave conditions begin at wave 15 and change every three waves. Brood tide adds enemies, Blood moon increases speed and rewards, Iron rain adds health, Gilded hunt adds treasure enemies, Arcane eclipse improves power recharge but regenerates enemies. Tap the condition label for its explanation.
-- Elite enemies begin at wave 40 and become more common after wave 80. They have a gold glow, more health and a little extra speed.
-- 12 added cards bring the total to 30. New cards unlock progressively from waves 8–25. From wave 40, drafts include an eligible expansion card while any remain available.
-- Later health scaling is gentler than v1. Damage gains a small per-wave ascension multiplier after 40. Infinite edge supports continued build growth.
+## The new combat loop
+1. Drag through a group and RELEASE to slash. Swipes hit crossed enemies, crack shell guards and collect crossed bonus drops. Recharge is about one second. Very short gestures are ignored.
+2. Tap CYAN CORE rings for a precision bonus. Tap AMBER COUNTER rings before they fade for a stronger counter, pushback, energy and cooldown recovery. These rewards require a fresh tap. Holding continues normal attacks.
+3. Tap drifting bonus gems, time orbs and runes. Runes interrupt their owner and expose its core. Timed rifts also appear independently during battle.
+4. Your actions fill the Soul Burst bar. Press Soul Burst at 100% to damage the whole swarm and briefly slow the battlefield. It waits for enemies and does not spend charge on an empty arena.
+5. Complete the wave bounty shown above the powers for coins and a crystal. Bounties rotate among slashes, core hits, collection and counters/rune catches. Each pays only once per wave.
 
-## New cards
-Moonlit sabers sweeps enemies with automatic blades.
-Prismatic lance fires a piercing lane beam.
-Tempest choir strikes several enemies with thunderbolts.
-Bloodcrescent adds a returning multi-target glaive.
-Glacial lattice plants proximity mines near the ward.
-Stellar collapse requires Event horizon and detonates when the wormhole finishes its pull.
-Phoenix pact grants one revival per card level for the current run.
-Briar ward automatically attacks slimes near the ward.
-Hexfire brand stacks damage vulnerability.
-Infinite edge adds multiplicative late-game damage.
-Borrowed eternity extends Frost nova and Overcharge.
-Chromatic rupture turns periodic direct attacks into whole-swarm bursts, strengthened by elemental cards.
+A short guide appears when you first start or continue a run after this update.
+Your companion and automatic cards still work. Manual actions add stronger damage, energy and reward opportunities.
+New slimes enter visibly, and cores light up on entry and periodically afterwards. Companions do not consume core/counter opportunities.
 
-## Effects and audio
-Event horizon now opens a lasting animated wormhole with a generated accretion disk, orbiting sparks, a dark core and a physical pull toward its center. Stellar collapse adds the closing blast.
-New generated textures also support rune circles, starbursts and poison clouds. Piercing beams, thunder, blades, mines and enemy casts have distinct effects.
-New portal, beam, thunder, revival, shield and healing sounds join the original effects. Frequent sounds and visual counts are bounded to reduce overwhelming overlap.
-Settings includes sound, ambient music, haptics and screen shake. Actual sound and vibration support depends on the browser/device.
+## Eight new cards — 38 total
+Crescendo cleave increases swipe damage and recharge.
+Heartseeker improves core damage and timing windows.
+Mirrorfang turns successful counters into swarm-wide damage.
+Greedy grasp improves catch radius, drop value and energy.
+Heart of chaos increases Soul Burst damage and attack energy.
+Rift bounty improves bounty rewards and adds a heal.
+Chromatic blades makes group swipes trigger elemental explosions.
+Stolen moment makes counters slow the battlefield longer and restore more cooldown.
+Early drafts include eligible action cards while preserving the early rare guarantee.
 
-## Existing controls and progress
-Tap or hold on slimes. Drag your held finger to aim. Your companion attacks automatically.
-Use Frost nova to slow the swarm and Overcharge to double damage temporarily.
-Clear a wave to choose one card. Powers stack for that run. There is one free reroll per wave.
-Pause or Save & home preserves your run and unfinished draft. Combat pauses while the app is hidden.
-Coins, crystals, permanent upgrades, Grimoire discoveries and milestones survive defeat.
-Collect sanctuary income on the home screen. Away growth is capped at eight hours and its bank holds 20,000 coins.
-Settings contains save export/import and a confirmed reset. Field guide explains the enemy roles.
+## Eight new slime models
+Bombcore exposes a charge that a timed tap can defuse into a chain explosion.
+Candy cache spills three catchable bonus gems.
+Scarlet duelist offers timed counter windows.
+Pearl shell has guard layers that a slash cracks immediately.
+Lantern wisp releases an interruptible rune.
+Chrono jelly releases a catchable time orb.
+Storm Shogun and Clockwork Dragon join the boss rotation.
+There are seven bosses in the cycle. Existing realms, wave conditions, elites and older enemies remain.
+
+## Existing progress and controls
+Tap or hold for ordinary attacks. Swipe groups, and lift/re-tap to take timed opportunities.
+Frost nova and Overcharge remain available. New action cards work alongside the previous 30 cards.
+All earned coins, crystals, upgrades, discoveries and milestones survive defeat.
+Pause or Save & home keeps the run and unfinished card choice.
+The sanctuary earns coins while playing or away, with the existing eight-hour offline limit and 20,000-coin bank cap.
+Export/import, confirmed reset, audio, music, haptics and screen-shake settings remain available.
+Tideforge saves remain separate and are not changed.
+
+## Sound
+New swipe, counter, precision, burst and pickup sounds join the prior effects. Slashes and Soul Burst include short noise layers.
+Actual audio and haptics depend on the browser/device.

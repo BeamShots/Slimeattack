@@ -18,3 +18,10 @@ effects.webp — transparent 2×2 effect atlas prompted with a face-on black hol
 biomes.webp — three equal portrait battlefields in one horizontal atlas. Prompt requested mushroom bog, volcanic forge and astral ruins with uncluttered dark central combat space.
 
 All images are local files beside the scripts. No art or sound service is called during play.
+
+# Soul Rush expansion art
+Created with the built-in image-generation tool and incorporated as local files.
+enemies3.webp — aligned 4×2 atlas. Prompt requested Bombcore, candy piñata slime, scarlet ninja duelist, pearl-shell slime, lantern ghost, hourglass jelly, storm-duelist boss and clockwork dragon-slime boss. A second image-generation edit removed the pale background while preserving those characters.
+icons3.webp — aligned 4×2 atlas. Prompt requested sweeping sword, ruby weak-point bullseye, lightning-catching parry gauntlet, gem magnet, energy fist, bounty scroll, chromatic swords and chained hourglass.
+Both sheets use the established glossy, detailed pixel-painted fantasy style. Functional effects use the existing generated effect atlas plus procedural sword trails, cue rings, particles and collection animations.
+Sound is synthesized locally with Web Audio, including shaped noise for the slash and Soul Burst.

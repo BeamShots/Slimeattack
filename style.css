@@ -45,3 +45,8 @@ dialog{color:var(--white);width:min(94vw,470px);max-height:85dvh;padding:6px 8px
 #arena[data-realm="3"]{background:linear-gradient(#0c0d2511,#0b122a22),url('./biomes.webp') 100% 50% / 300% 100%}
 .enemyPortrait{display:block;width:90px;height:90px;background-repeat:no-repeat;margin:0 auto}
 #homeNav button{font-size:18px;padding:7px 3px}#homeNav span{font-size:9px}
+.actionInfo{padding:7px 10px;font-size:10px;color:#d9eae0;text-align:center;background:linear-gradient(90deg,#183e42,#232746);border-top:1px solid #6eafba55;min-height:30px}
+.energyTrack{height:3px;background:#09192a}.energyTrack i{display:block;height:100%;width:0;background:linear-gradient(90deg,#72deff,#e6b1ff,#ffe19d);transition:width .1s}
+.abilities{gap:5px;padding-left:7px;padding-right:7px}.ability{gap:5px;padding:6px 4px}.ability .skillIcon{width:30px;height:30px}.ability b{font-size:10px}.ability small{font-size:8px}
+.ability.charged{background:linear-gradient(#544267,#4a3841);border-color:#ffe29b;box-shadow:0 0 20px #dab4ff55}
+.petStatus{font-size:8px}

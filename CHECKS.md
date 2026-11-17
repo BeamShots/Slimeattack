@@ -1,15 +1,16 @@
-# Riftbound v2 verification
-93 automated checks passed:
-- 36 original engine checks, rerun against v2.
-- 24 expansion checks covering v1 wave-45 migration; new cards, prerequisites and late draft guarantees; boss and realm rotation; all wave conditions; splitting/minion accounting; mini recursion prevention; healer pulses; mirror hits; sentinel protection; blink/burrow/haste/leech behaviours; boss summons/dashes/rifts; automatic blades/lasers/thunder; glaives and resonance; mines; lasting vortex pull and collapse; limited revivals; thorns, curses, infinity scaling, power duration and saved mines/elites.
-- 26 simulated-DOM interaction checks covering home, combat, pointer/hold/release controls, cooldowns, cards/drafts, save/home/resume, permanent upgrades, collection, milestones, idle claims, settings, imports/exports, confirmed reset, field guide, new icon mapping, realm information and rendering all added effects with actual generated textures.
-- 3 early progression simulations reached wave 31.
-- 3 later progression simulations started at wave 41 with a plausible developed v1 build and reached wave 101 in 770–798 simulated seconds. Each encountered 19 enemy types and selected all 12 expansion cards. They used 5 simulated taps per second and activated ready powers. They repeatedly checked save/load, accounting, entity caps and finite values.
-- 1 audio graph check covers seventeen sound envelopes, ambient notes, oscillator cleanup and mute.
+# Soul Rush verification
+131 automated checks passed:
+- 36 base engine checks.
+- 24 Riftbound checks, rerun against v3.
+- 29 active-combat checks covering v2 wave-45 migration, 38 cards, seven bosses, active-card draft guarantees, slash geometry, diagonals, cooldowns, invalid paths, misses, cleave upgrades, core windows, fresh-tap intent, companion behaviour, timed counters, missed counters, runes, drops, magnet bonuses, swipe collection, Soul Burst spend/empty-arena behaviour, bounty duplication/reset, every new card, bomb explosions, candy drops, shell cracking, new casts and saved action state.
+- 32 simulated-DOM checks covering original screens and controls plus the one-time guide, pointer-drag-release slashes, cancellation, precision/collection dispatch, charged Burst control and meter, new icon/portrait mappings and actual-art rendering.
+- Three legacy-input early progression simulations reached waves 18–21. These did not use swipes, pickups or Soul Burst.
+- Three active-input early simulations reached wave 31. They used three blade/companion upgrades and two ward upgrades, tapped at up to five times per second, collected available drops and used swipes/powers. The simulated runs included 254–347 slashes, 723–878 core hits, 59–66 counters and 394–419 catches. These are automated input patterns, not observed human sessions.
+- Three developed-build late simulations reached wave 101 with active-state serialization and entity accounting checks.
+- One audio-graph check covers 22 sound envelopes, two noise layers, ambient notes, cleanup and mute.
 
-Additional checks verify all cached files exist, install/activate/cache response logic, non-GET bypass, JavaScript syntax, flat local references and ZIP integrity.
-A synthetic v1 wave-45 save with 15,297 coins, 8 crystals, an injured boss and existing cards retains those values under v2.
-Enemy, card and effect atlases were aligned into isolated cells. A native-canvas scene using the real generated art was visually inspected.
+Additional checks cover cached-file existence, service-worker install/activate/cache response logic, non-GET bypass, JavaScript syntax, flat local references and ZIP integrity.
+Generated enemy/icon sheets were isolated into aligned cells. A native-canvas scene using the actual new art, action rings, pickups and a slash path was visually inspected.
 
 Limitations:
-Interaction tests use a simulated DOM and native canvas. These are not a physical-phone playtest. Full browser layout, device audio and vibration, Android installation, real browser offline reload and phone frame rate remain unverified. The build is not claimed to be bug-free.
+UI interactions ran in a simulated DOM with native canvas, not on a physical phone. Full browser layout, physical swipe feel, device audio/vibration, real service-worker offline reload, Android installation and mobile frame rate remain unverified.

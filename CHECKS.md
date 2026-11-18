@@ -1,16 +1,18 @@
-# Soul Rush verification
-131 automated checks passed:
+# Moonhaven verification
+163 automated checks passed:
 - 36 base engine checks.
-- 24 Riftbound checks, rerun against v3.
-- 29 active-combat checks covering v2 wave-45 migration, 38 cards, seven bosses, active-card draft guarantees, slash geometry, diagonals, cooldowns, invalid paths, misses, cleave upgrades, core windows, fresh-tap intent, companion behaviour, timed counters, missed counters, runes, drops, magnet bonuses, swipe collection, Soul Burst spend/empty-arena behaviour, bounty duplication/reset, every new card, bomb explosions, candy drops, shell cracking, new casts and saved action state.
-- 32 simulated-DOM checks covering original screens and controls plus the one-time guide, pointer-drag-release slashes, cancellation, precision/collection dispatch, charged Burst control and meter, new icon/portrait mappings and actual-art rendering.
-- Three legacy-input early progression simulations reached waves 18–21. These did not use swipes, pickups or Soul Burst.
-- Three active-input early simulations reached wave 31. They used three blade/companion upgrades and two ward upgrades, tapped at up to five times per second, collected available drops and used swipes/powers. The simulated runs included 254–347 slashes, 723–878 core hits, 59–66 counters and 394–419 catches. These are automated input patterns, not observed human sessions.
-- Three developed-build late simulations reached wave 101 with active-state serialization and entity accounting checks.
-- One audio-graph check covers 22 sound envelopes, two noise layers, ambient notes, cleanup and mute.
+- 24 Riftbound checks.
+- 29 Soul Rush active-combat checks.
+- 44 simulated-DOM interaction checks. These cover previous controls and the new village locations, memory playback/input/replay, fishing casts/bites/reels/limits, puzzle rotation/hints/completion, restoration, extra rerolls, live-battle pause/resume across activities, timer suspension under dialogs, effect cycling, damage-number toggling and reduced visual budgets.
+- 20 Moonhaven model checks cover migration, data validation, side-game state transitions, reward duplication prevention, limits, discoveries, puzzle solvability, hints, rotations, restoration costs, idle growth, rerolls, serialization, visual-setting independence and idle-claim duplication. One of these checks generated and solved 500 different seeded spatial puzzles.
+- Three legacy-input early combat simulations.
+- Three developed-build late combat simulations.
+- Three active-input progression simulations.
+- One audio-graph check for original/action effects, ambient notes, noise layers, cleanup and mute.
 
-Additional checks cover cached-file existence, service-worker install/activate/cache response logic, non-GET bypass, JavaScript syntax, flat local references and ZIP integrity.
-Generated enemy/icon sheets were isolated into aligned cells. A native-canvas scene using the actual new art, action rings, pickups and a slash path was visually inspected.
+Additional checks verify all local references and cached files, service-worker install/activate/cache logic, non-GET bypass, JavaScript syntax, flat packaging and ZIP integrity.
+The original combat checks were rerun against the new build. Town rewards and visual settings are independent of combat simulation.
+The village, moonstone frame and location/rune atlas are generated images used by the actual game.
 
 Limitations:
-UI interactions ran in a simulated DOM with native canvas, not on a physical phone. Full browser layout, physical swipe feel, device audio/vibration, real service-worker offline reload, Android installation and mobile frame rate remain unverified.
+UI interaction tests run in a simulated DOM. Full browser layout, physical-phone controls, device sound/vibration, Android installation, real offline reload and phone frame rate have not been verified on a physical device.

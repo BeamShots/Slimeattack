@@ -25,3 +25,11 @@ enemies3.webp — aligned 4×2 atlas. Prompt requested Bombcore, candy piñata s
 icons3.webp — aligned 4×2 atlas. Prompt requested sweeping sword, ruby weak-point bullseye, lightning-catching parry gauntlet, gem magnet, energy fist, bounty scroll, chromatic swords and chained hourglass.
 Both sheets use the established glossy, detailed pixel-painted fantasy style. Functional effects use the existing generated effect atlas plus procedural sword trails, cue rings, particles and collection animations.
 Sound is synthesized locally with Web Audio, including shaped noise for the slash and Soul Burst.
+
+# Moonhaven art
+Generated with the built-in image-generation tool and included locally.
+haven.webp — portrait storybook pixel village with a portal, rune forge on the left, moonlit fishing pond on the right, stargazer observatory, fountain and garden. Open upper sky and lower path accommodate functional UI.
+moonframe.webp — silver-and-gold moonstone frame with turquoise corner jewels, a crescent crest and an empty sapphire velvet center. Used as a stretchable nine-slice frame for menus, cards, buttons and village labels.
+havenicons.webp — aligned 4×3 atlas prompted with rune forge, fishing rod/moonfish, telescope, cottage, moon lantern, star fountain, lunar tree, stardust pouch and four distinct elemental rune stones.
+The spatial puzzle uses exact code-drawn conduit connections. The generated art supplies its surrounding magical interface.
+All art files are beside the scripts. No external image or font service is needed during play.

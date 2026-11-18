@@ -1,5 +1,6 @@
 (function(root){
 'use strict';
+const H=typeof module!=='undefined'?require('./haven.js'):root.Haven;
 const MAX_IDLE=8*3600, IDLE_CAP=20000;
 const cards=[
  {id:'power',name:'Emerald edge',rarity:'common',icon:0,max:8,desc:'+40% tap and companion damage. Stacks multiplicatively.'},
@@ -59,17 +60,18 @@ const milestones=[
  {id:'seventyfive',name:'World breaker',desc:'Clear wave 75.',goal:m=>m.best>=75,reward:{coins:2400,shards:25}},
  {id:'hundredwave',name:'Endless ascension',desc:'Clear wave 100.',goal:m=>m.best>=100,reward:{coins:4000,shards:40}}
 ];
-function fresh(now=Date.now()){return {version:1,activeGuideSeen:false,coins:0,shards:0,best:0,kills:0,runs:0,upgrades:{blade:0,hull:0,pet:0,garden:0,luck:0},claimed:[],dex:{},idle:{bank:0,lastAt:now},settings:{sound:true,music:false,haptics:true,shake:true},run:null};}
+function fresh(now=Date.now()){return {version:1,haven:H.town(),activeGuideSeen:false,coins:0,shards:0,best:0,kills:0,runs:0,upgrades:{blade:0,hull:0,pet:0,garden:0,luck:0},claimed:[],dex:{},idle:{bank:0,lastAt:now},settings:{sound:true,music:false,haptics:true,shake:true,effects:'balanced',numbers:true},run:null};}
 const bound=(v,a,b)=>Number.isFinite(v)?Math.max(a,Math.min(b,v)):a;
 function normalize(raw,now=Date.now()){
  if(!raw||raw.version!==1||!raw.upgrades||!raw.idle)throw Error('This is not a Slimefall save.');
- const m=fresh(now);m.activeGuideSeen=raw.activeGuideSeen===true;
+ const m=fresh(now);m.activeGuideSeen=raw.activeGuideSeen===true;m.haven=H.normalize(raw.haven);
  for(const k of ['coins','shards','kills','runs'])m[k]=Math.floor(bound(raw[k],0,1e12));
  m.best=Math.floor(bound(raw.best,0,10000));
  for(const k in upgrades)m.upgrades[k]=Math.floor(bound(raw.upgrades[k],0,upgrades[k].max));
  m.claimed=Array.isArray(raw.claimed)?[...new Set(raw.claimed.filter(id=>milestones.some(x=>x.id===id)))]:[];
  for(const c of cards)if(raw.dex?.[c.id])m.dex[c.id]=true;
  for(const k in m.settings)if(typeof raw.settings?.[k]==='boolean')m.settings[k]=raw.settings[k];
+ if(['full','balanced','calm'].includes(raw.settings?.effects))m.settings.effects=raw.settings.effects;
  m.idle={bank:bound(raw.idle.bank,0,IDLE_CAP),lastAt:bound(raw.idle.lastAt,0,now)};
  // An invalid run never prevents recovery of the permanent collection.
  if(raw.run){try{m.run=normalizeRun(raw.run,m);}catch{m.run=null;}}
@@ -105,7 +107,7 @@ function normalizeRun(raw,m){
  if(r.hp<=0)r.phase='over';
  return r;
 }
-function idleRate(m){return (1+m.upgrades.garden*.6)/6;}
+function idleRate(m){return (1+m.upgrades.garden*.6)/6*(1+.1*m.haven.restored.length);}
 function accrue(m,now=Date.now()){
  const seconds=Math.min(MAX_IDLE,Math.max(0,(now-m.idle.lastAt)/1000));
  const before=m.idle.bank;
@@ -115,7 +117,7 @@ function accrue(m,now=Date.now()){
 function claimIdle(m){const count=Math.floor(m.idle.bank);m.coins+=count;m.idle.bank-=count;return count;}
 function upgradeCost(m,id){const d=upgrades[id];return d?Math.ceil(d.base*Math.pow(id==='luck'?1.65:1.43,m.upgrades[id])):Infinity;}
 function buy(m,id){const u=upgrades[id];if(!u||m.upgrades[id]>=u.max)return false;const cost=upgradeCost(m,id);if(m[u.currency]<cost)return false;m[u.currency]-=cost;m.upgrades[id]++;return true;}
-function newRunData(m){return {phase:'fight',wave:1,hp:5+m.upgrades.hull,maxHp:5+m.upgrades.hull,enemies:[],cards:{},offers:[],target:8,spawned:0,resolved:0,kills:0,earned:0,hits:0,combo:0,bestCombo:0,time:0,lastHit:-9,spawnClock:1,petClock:0,meteorClock:0,vortexClock:0,freeze:0,fury:0,frostCD:0,furyCD:0,nextId:1,rerolls:1,modifier:'calm',bonusSpawned:0,extraClock:0,vortexTime:0,revives:0,mines:[],energy:0,slashCD:0,slowmo:0,pickups:[],nextPickup:1,actions:{swipes:0,weak:0,parries:0,collected:0,bursts:0},bounty:makeBounty(1)};}
+function newRunData(m){return {phase:'fight',wave:1,hp:5+m.upgrades.hull,maxHp:5+m.upgrades.hull,enemies:[],cards:{},offers:[],target:8,spawned:0,resolved:0,kills:0,earned:0,hits:0,combo:0,bestCombo:0,time:0,lastHit:-9,spawnClock:1,petClock:0,meteorClock:0,vortexClock:0,freeze:0,fury:0,frostCD:0,furyCD:0,nextId:1,rerolls:m.haven.restored.length===3?2:1,modifier:'calm',bonusSpawned:0,extraClock:0,vortexTime:0,revives:0,mines:[],energy:0,slashCD:0,slowmo:0,pickups:[],nextPickup:1,actions:{swipes:0,weak:0,parries:0,collected:0,bursts:0},bounty:makeBounty(1)};}
 function start(m){m.runs++;m.run=newRunData(m);return m.run;}
 function level(r,id){return r.cards[id]||0;}
 function damage(m,r){
@@ -159,7 +161,7 @@ function choose(m,id,rng=Math.random){
  if(id==='mend'){r.maxHp=Math.min(100,r.maxHp+1);r.hp=Math.min(r.maxHp,r.hp+3);}
  if(id==='berserk'){r.maxHp=Math.min(100,r.maxHp+1);r.hp=Math.min(r.maxHp,r.hp+1);}
  if(id==='vampire')r.hp=Math.min(r.maxHp,r.hp+1);
- r.wave++;r.bounty=makeBounty(r.wave);r.pickups=[];r.modifier=condition(r.wave);r.target=waveTarget(r.wave);r.bonusSpawned=0;r.mines=[];r.vortexTime=0;r.spawned=0;r.resolved=0;r.enemies=[];r.spawnClock=.7;r.offers=[];r.phase='fight';r.rerolls=1;
+ r.wave++;r.bounty=makeBounty(r.wave);r.pickups=[];r.modifier=condition(r.wave);r.target=waveTarget(r.wave);r.bonusSpawned=0;r.mines=[];r.vortexTime=0;r.spawned=0;r.resolved=0;r.enemies=[];r.spawnClock=.7;r.offers=[];r.phase='fight';r.rerolls=m.haven.restored.length===3?2:1;
  return true;
 }
 function reroll(m,rng=Math.random){

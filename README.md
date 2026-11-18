@@ -1,56 +1,65 @@
-# Slimefall · Soul Rush v3
+# Slimefall · Moonhaven v4
 
-An active-combat update to Riftbound. Same save key, same permanent progress and resumable runs.
+A magical home hub and three side games for a break between battle runs.
+Your Slimefall save key is unchanged. Coins, crystals, cards, upgrades and active runs carry forward.
 
-## Mobile upload
-Extract this ZIP. Upload ALL files together at the root of the SAME GitHub Pages repository, replacing matching names. No folders or build tools are needed.
-Include enemies3.webp and icons3.webp alongside the original files. There are now ten WebP art files.
-Load the same website online after deployment, then close and reopen if the previous cached version is still shown.
-An online visit caches all game files for later offline play.
-Export your Slimefall save in Settings first if you want an extra backup.
+## Upload from your phone
+Extract the ZIP. Upload ALL files together at the root of the SAME GitHub Pages repository, replacing matching names. No folders and no build tools are needed.
+New files are haven.js, haven.webp, moonframe.webp and havenicons.webp.
+Open your website online after deployment. Close and reopen after the cache updates if the previous edition remains visible.
+The first online visit caches the game, side games and art for offline use.
+You can export an extra save backup in Settings before updating.
 Install through the browser menu → Install app / Add to home screen.
 
-## The new combat loop
-1. Drag through a group and RELEASE to slash. Swipes hit crossed enemies, crack shell guards and collect crossed bonus drops. Recharge is about one second. Very short gestures are ignored.
-2. Tap CYAN CORE rings for a precision bonus. Tap AMBER COUNTER rings before they fade for a stronger counter, pushback, energy and cooldown recovery. These rewards require a fresh tap. Holding continues normal attacks.
-3. Tap drifting bonus gems, time orbs and runes. Runes interrupt their owner and expose its core. Timed rifts also appear independently during battle.
-4. Your actions fill the Soul Burst bar. Press Soul Burst at 100% to damage the whole swarm and briefly slow the battlefield. It waits for enemies and does not spend charge on an empty arena.
-5. Complete the wave bounty shown above the powers for coins and a crystal. Bounties rotate among slashes, core hits, collection and counters/rune catches. Each pays only once per wave.
+## Moonhaven
+Tap the illustrated locations on the village scene.
+Runeforge is on the left, Moonpool on the right and Stargazer below it.
+Enter the Rift starts a new battle. Continue resumes your saved battle.
+The stardust button opens village restoration and activity details.
+Ascension, Grimoire, Slimes and Milestones remain accessible below the sanctuary.
+You can pause a battle, visit an activity and return to the same run later.
 
-A short guide appears when you first start or continue a run after this update.
-Your companion and automatic cards still work. Manual actions add stronger damage, energy and reward opportunities.
-New slimes enter visibly, and cores light up on entry and periodically afterwards. Companions do not consume core/counter opportunities.
+## Three side games
+### Runeforge
+Press Watch pattern. Four rune stones glow in sequence and play different tones.
+Tap the same order after playback finishes. Answers have no timer.
+A completed round pays coins and stardust immediately. Next pattern extends the sequence.
+You have three attempts. A wrong answer lets you replay the same sequence.
+Earned rewards stay banked if you leave or finish the session.
 
-## Eight new cards — 38 total
-Crescendo cleave increases swipe damage and recharge.
-Heartseeker improves core damage and timing windows.
-Mirrorfang turns successful counters into swarm-wide damage.
-Greedy grasp improves catch radius, drop value and energy.
-Heart of chaos increases Soul Burst damage and attack energy.
-Rift bounty improves bounty rewards and adds a heal.
-Chromatic blades makes group swipes trigger elemental explosions.
-Stolen moment makes counters slow the battlefield longer and restore more cooldown.
-Early drafts include eligible action cards while preserving the early rare guarantee.
+### Moonpool
+Cast a line. Wait until the float glows and the game announces a bite, then press REEL.
+The first 0.55 seconds of the bite window gives a perfect catch. The whole window lasts 1.6 seconds.
+An early reel or missed bite uses one attempt and lets you cast again.
+Each trip has three casts. Each caught fish pays immediately. Perfect catches can reveal the rare Dreamscale.
+The journal remembers five possible fish discoveries.
 
-## Eight new slime models
-Bombcore exposes a charge that a timed tap can defuse into a chain explosion.
-Candy cache spills three catchable bonus gems.
-Scarlet duelist offers timed counter windows.
-Pearl shell has guard layers that a slash cracks immediately.
-Lantern wisp releases an interruptible rune.
-Chrono jelly releases a catchable time orb.
-Storm Shogun and Clockwork Dragon join the boss rotation.
-There are seven bosses in the cycle. Existing realms, wave conditions, elites and older enemies remain.
+### Stargazer
+Rotate the sixteen conduit tiles by tapping them.
+Connect the marked IN port on the left to OUT on the right. Lit tiles are connected to the input.
+There is no timer. Every generated board has a known route.
+Hints align one route tile at a time and reduce the final reward.
+A completed puzzle pays coins and stardust once. Next constellation creates a new board.
 
-## Existing progress and controls
-Tap or hold for ordinary attacks. Swipe groups, and lift/re-tap to take timed opportunities.
-Frost nova and Overcharge remain available. New action cards work alongside the previous 30 cards.
-All earned coins, crystals, upgrades, discoveries and milestones survive defeat.
-Pause or Save & home keeps the run and unfinished card choice.
-The sanctuary earns coins while playing or away, with the existing eight-hour offline limit and 20,000-coin bank cap.
-Export/import, confirmed reset, audio, music, haptics and screen-shake settings remain available.
-Tideforge saves remain separate and are not changed.
+## Restore the village
+Activities award stardust, shown on the home screen.
+Moon lanterns cost 8, the star fountain costs 18 and the lunar garden costs 30.
+Each restored landmark adds 10% sanctuary income. All three give a total of +30%.
+Restoring all three grants two free rerolls in new battle runs and future wave drafts.
+Restored landmark illustrations appear on the home scene.
+Your restoration, discoveries and activity records are saved with your main progress.
 
-## Sound
-New swipe, counter, precision, burst and pickup sounds join the prior effects. Slashes and Soul Burst include short noise layers.
-Actual audio and haptics depend on the browser/device.
+## Calmer battles and quality of life
+Settings → Battle effects cycles through Full, Balanced and Calm. Balanced is the initial setting.
+Calm reduces decorative bursts, particles, numbers, beam overlap and portal sparks. Core/counter cues and pickups remain visible.
+Damage numbers have a separate toggle. Sound, music, vibration and screen shake settings remain available.
+Visual intensity does not change combat damage, rewards or enemy behaviour.
+Activity timers pause while a dialog is open or the page is hidden.
+Leaving an activity keeps earned rewards. The unfinished activity itself resets when revisited.
+Battles remain paused during side activities. Passive sanctuary income still accrues.
+
+## Existing battle
+Swipe and release through groups; fresh-tap cyan cores or amber counters; catch bonus drops; fill and press Soul Burst.
+Your companion, 38 cards, seven-boss rotation, realms, conditions, upgrades and milestones remain in place.
+The sanctuary retains its eight-hour offline-growth limit and 20,000-coin bank cap.
+Save import/export and confirmed reset are in Settings.

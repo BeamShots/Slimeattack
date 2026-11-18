@@ -1,5 +1,6 @@
 'use strict';
-const $=id=>document.getElementById(id), E=Slime;
+const $=id=>document.getElementById(id), E=Slime, HV=Haven;
+let havenGame=null,lastRuneCue=-1;
 const KEY='slimefall-v1:'+location.pathname.replace(/index\.html$/,'');
 let meta=E.fresh(),storageFailed=false;
 try{const saved=localStorage.getItem(KEY);if(saved)meta=E.normalize(JSON.parse(saved));}catch{storageFailed=true;}
@@ -38,7 +39,7 @@ function sound(type){
   if(type==='pop'&&performance.now()-lastPop<65)return;if(type==='pop')lastPop=performance.now();
   if(type==='crit'&&performance.now()-lastCrit<90)return;if(type==='crit')lastCrit=performance.now();
   if(['portal','laser','thunder','shield','heal'].includes(type)){if(performance.now()-lastPower<85)return;lastPower=performance.now();}
-  const notes={slash:[720,.18,'sawtooth',.035],parry:[1500,.26,'sine',.065],precision:[950,.12,'sine',.055],burst:[130,.65,'triangle',.07],pickup:[1200,.09,'sine',.035],portal:[90,.7,'sine',.09],laser:[1300,.24,'sawtooth',.025],thunder:[170,.35,'triangle',.07],revive:[680,.6,'sine',.08],shield:[1750,.09,'sine',.035],heal:[560,.25,'sine',.025],ui:[460,.05,'sine',.035],tap:[690,.045,'triangle',.04],pop:[300,.11,'sine',.07],crit:[1100,.09,'triangle',.065],hurt:[120,.19,'sawtooth',.04],coin:[1350,.12,'sine',.05],power:[380,.3,'triangle',.06],draft:[540,.32,'sine',.07],buy:[840,.2,'sine',.06],pet:[850,.045,'sine',.015],over:[170,.5,'triangle',.045]};
+  const notes={rune0:[523,.2,'sine',.035],rune1:[659,.2,'sine',.035],rune2:[784,.2,'sine',.035],rune3:[988,.2,'sine',.035],slash:[720,.18,'sawtooth',.035],parry:[1500,.26,'sine',.065],precision:[950,.12,'sine',.055],burst:[130,.65,'triangle',.07],pickup:[1200,.09,'sine',.035],portal:[90,.7,'sine',.09],laser:[1300,.24,'sawtooth',.025],thunder:[170,.35,'triangle',.07],revive:[680,.6,'sine',.08],shield:[1750,.09,'sine',.035],heal:[560,.25,'sine',.025],ui:[460,.05,'sine',.035],tap:[690,.045,'triangle',.04],pop:[300,.11,'sine',.07],crit:[1100,.09,'triangle',.065],hurt:[120,.19,'sawtooth',.04],coin:[1350,.12,'sine',.05],power:[380,.3,'triangle',.06],draft:[540,.32,'sine',.07],buy:[840,.2,'sine',.06],pet:[850,.045,'sine',.015],over:[170,.5,'triangle',.045]};
   const [freq,duration,wave,volume]=notes[type]||notes.ui;
   const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;o.type=wave;o.frequency.setValueAtTime(freq,now);o.frequency.exponentialRampToValueAtTime(type==='pop'?90:type==='portal'?220:type==='laser'?180:freq*1.5,now+duration);
   g.gain.setValueAtTime(.001,now);g.gain.linearRampToValueAtTime(volume,now+.006);g.gain.exponentialRampToValueAtTime(.001,now+duration);o.connect(g);g.connect(audio.destination);o.start(now);o.stop(now+duration+.01);
@@ -75,16 +76,19 @@ function showScreen(name){
  for(const id of ['home','combat','page'])$(id).classList.toggle('active',id===name);
  $('draftOverlay').hidden=!(name==='combat'&&meta.run?.phase==='draft');
 }
-function showHome(){heldPointer=null;paused=true;$('dialog').close();showScreen('home');updateHome();updateHUD();save();}
+function showHome(){havenGame=null;heldPointer=null;paused=true;$('dialog').close();showScreen('home');updateHome();updateHUD();save();}
 function updateHome(){
  $('coins').textContent='● '+Math.floor(meta.coins);
  $('shards').textContent='✦ '+meta.shards;
  $('homeStats').textContent='BEST WAVE '+meta.best+'  ·  '+meta.kills+' SLIMES DEFEATED';
  const active=meta.run&&meta.run.phase!=='over';
  $('resume').hidden=!active;$('resume').textContent=active?'Continue · wave '+meta.run.wave:'Continue your run';
- $('play').firstChild.textContent=active?'NEW RUN ':'BEGIN A RUN ';
+ $('play').firstChild.textContent=active?'NEW RUN ':'ENTER THE RIFT ';
  $('idleInfo').textContent=Math.floor(meta.idle.bank)+' coins ready · '+Math.round(E.idleRate(meta)*60)+'/min';
  $('claimIdle').disabled=meta.idle.bank<1;
+ $('havenStatus').textContent='✧ '+meta.haven.dust+' stardust · Restore Moonhaven '+meta.haven.restored.length+'/3';
+ $('villageScene').dataset.restored=String(meta.haven.restored.length);
+ $('restorationMarks').replaceChildren(...meta.haven.restored.map(id=>{const b=HV.buildings.find(b=>b.id===id),n=havenIcon(b.icon);n.classList.add('restoredMark',id+'Mark');n.setAttribute('aria-label',b.name+' restored');return n;}));
 }
 function begin(){
  meta.run=E.start(meta);paused=false;particles=[];texts=[];rings=[];lines=[];specialFx=[];
@@ -109,10 +113,11 @@ $('claimIdle').onclick=()=>{
 document.querySelectorAll('[data-page]').forEach(n=>n.onclick=()=>{sound('ui');openPage(n.dataset.page);});
 $('back').onclick=showHome;
 function openPage(name){
- page=name;paused=true;showScreen('page');$('pageTitle').textContent={workshop:'Ascension',collection:'Grimoire',milestones:'Milestones',bestiary:'Field guide'}[name];renderPage();
+ havenGame=null;lastRuneCue=-1;page=name;paused=true;showScreen('page');$('pageTitle').textContent={workshop:'Ascension',collection:'Grimoire',milestones:'Milestones',bestiary:'Field guide',village:'Moonhaven',runes:'Runeforge',fishing:'Moonpool',stars:'Stargazer'}[name];renderPage();
 }
 function renderPage(){
  const root=$('pageContent');root.replaceChildren();
+ if(['village','runes','fishing','stars'].includes(page))return renderHavenPage();
  if(page==='workshop'){
   root.append(el('p','notice','Permanent upgrades survive every run. Ward hearts apply when starting a new run. Other upgrades improve your current build too.'));
   for(const [id,u]of Object.entries(E.upgrades)){
@@ -188,7 +193,7 @@ function showDraft(){
   if((r.cards[id]||0)+1===3&&['chain','poison','blast'].includes(id))copy.append(el('span','nextLevel','✦ EVOLUTION · '+{chain:'Guaranteed chains',poison:'Poison death-bursts',blast:'Larger explosion radius'}[id]));
   n.append(icon(c.icon),copy);$('draftCards').append(n);
  }
- $('reroll').disabled=r.rerolls<=0;$('reroll').textContent=r.rerolls>0?'↻ Reroll · 1 free':'Reroll used';
+ $('reroll').disabled=r.rerolls<=0;$('reroll').textContent=r.rerolls>0?'↻ Reroll · '+r.rerolls+' free':'Reroll used';
 }
 $('reroll').onclick=()=>{if(E.reroll(meta)){sound('draft');save();showDraft();}};
 $('draftHome').onclick=showHome;
@@ -237,7 +242,7 @@ function processEvents(events){
   if(e.type==='runeCast')specialFx.push({kind:'summon',x:e.x,y:e.y,life:.4,max:.4});
   if(e.type==='damage'){
    if(e.kind==='crit')sound('crit');
-   texts.push({x:e.x,y:e.y,text:e.kind==='crit'?'CRIT '+Math.ceil(e.amount):String(Math.max(1,Math.round(e.amount))),color:e.kind==='crit'?'#ffe184':e.kind==='poison'?'#d5a2ff':'#e9ffff',life:.7,max:.7,big:e.kind==='crit'});
+   if(meta.settings.numbers)texts.push({x:e.x,y:e.y,text:e.kind==='crit'?'CRIT '+Math.ceil(e.amount):String(Math.max(1,Math.round(e.amount))),color:e.kind==='crit'?'#ffe184':e.kind==='poison'?'#d5a2ff':'#e9ffff',life:.7,max:.7,big:e.kind==='crit'});
   }
   if(e.type==='kill'){
    sound('pop');addBurst(e.x,e.y,enemyColors[e.color],e.boss?23:10);
@@ -268,16 +273,23 @@ function processEvents(events){
   if(e.type==='fury'){sound('power');banner('OVERCHARGED · DOUBLE DAMAGE');vibrate(16);}
   if(e.type==='hurt'){
    sound('hurt');vibrate(25);
-   if(meta.settings.shake){$('arena').classList.remove('shake');void $('arena').offsetWidth;$('arena').classList.add('shake');}
+   if(meta.settings.shake&&meta.settings.effects!=='calm'){$('arena').classList.remove('shake');void $('arena').offsetWidth;$('arena').classList.add('shake');}
   }
   if(e.type==='combo'){sound('coin');banner(e.amount+'× COMBO · +3 COINS');}
   if(e.type==='boss'){sound('power');banner(E.enemyNames[e.enemyType??meta.run.enemies.find(e=>e.boss)?.type??7].toUpperCase());}
   if(e.type==='wave'){heldPointer=null;sound('draft');vibrate(20);save();showDraft();}
   if(e.type==='over'){sound('over');summary();}
  }
- specialFx=[...specialFx.filter(f=>['collapse','nova','laser','slashPath','parry'].includes(f.kind)).slice(-6),...specialFx.filter(f=>!['collapse','nova','laser','slashPath','parry'].includes(f.kind)).slice(-14)];particles=particles.slice(-190);texts=texts.slice(-30);lines=lines.slice(-35);rings=rings.slice(-15);
+ const mode=meta.settings.effects;
+ const important=['collapse','nova','laser','slashPath','parry'];
+ if(mode==='calm')specialFx=specialFx.filter(f=>important.includes(f.kind));
+ specialFx=[...specialFx.filter(f=>important.includes(f.kind)).slice(mode==='full'?-6:-3),...specialFx.filter(f=>!important.includes(f.kind)).slice(mode==='full'?-14:-4)];
+ particles=particles.slice(mode==='full'?-190:mode==='calm'?-16:-65);
+ texts=texts.slice(mode==='full'?-30:mode==='calm'?-3:-9);
+ lines=lines.slice(mode==='full'?-35:mode==='calm'?-4:-12);rings=rings.slice(mode==='full'?-15:mode==='calm'?-2:-5);
 }
 function addBurst(x,y,color,count){
+ count=Math.ceil(count*(meta.settings.effects==='full'?1:meta.settings.effects==='calm'?.12:.4));
  for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,speed=.03+Math.random()*.16;
   particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,color,life:.25+Math.random()*.35,max:.6,size:2+Math.random()*3});}
 }
@@ -391,7 +403,7 @@ function drawPortal(r,dt){
  ctx.fillStyle='#020410';ctx.beginPath();ctx.ellipse(0,0,size*.2*pulse,size*.13*pulse,0,0,Math.PI*2);ctx.fill();
  ctx.scale(1,.72);ctx.rotate(r.time*.9);effectTexture(0,0,0,size*pulse,.96);ctx.restore();
  ctx.save();ctx.globalCompositeOperation='lighter';
- for(let i=0;i<42;i++){
+ for(let i=0;i<(meta.settings.effects==='full'?42:meta.settings.effects==='calm'?8:20);i++){
   const phase=(r.time*.55+i*.073)%1,angle=i*2.399+r.time*1.6+phase*3,radius=size*.58*(1-phase);
   ctx.globalAlpha=Math.sin(phase*Math.PI)*pulse;ctx.fillStyle=i%3?'#b6a0ff':'#fff0b6';ctx.beginPath();ctx.arc(cx+Math.cos(angle)*radius,cy+Math.sin(angle)*radius*.65,1.5+(1-phase),0,Math.PI*2);ctx.fill();
  }
@@ -458,12 +470,15 @@ function showActionGuide(){
 }
 function settings(){
  const menu=el('div','menuButtons');
- for(const [id,label]of [['sound','Sound effects'],['music','Ambient music'],['haptics','Haptics'],['shake','Screen shake']]){
+ for(const [id,label]of [['sound','Sound effects'],['music','Ambient music'],['haptics','Haptics'],['shake','Screen shake'],['numbers','Damage numbers']]){
   menu.append(button(label+' · '+(meta.settings[id]?'on':'off'),()=>{
    meta.settings[id]=!meta.settings[id];save();settings();
   }));
  }
- menu.append(button('How to play',help),button('Export save',exportSave),button('Import save',()=>$('import').click()),button('Install on my phone',async()=>{
+ menu.append(button('Battle effects · '+meta.settings.effects,()=>{
+  const modes=['full','balanced','calm'];meta.settings.effects=modes[(modes.indexOf(meta.settings.effects)+1)%modes.length];specialFx=[];particles=[];texts=[];rings=[];lines=[];save();settings();
+ }));
+ menu.append(button('Village activities',()=>{$('dialog').close();openPage('village');}),button('How to play',help),button('Export save',exportSave),button('Import save',()=>$('import').click()),button('Install on my phone',async()=>{
   if(installPrompt){await installPrompt.prompt();installPrompt=null;}else notify('Browser menu → Install app / Add to home screen. Load online once for offline play.');
  }),button('Reset Slimefall',()=>{
   const confirm=el('div','menuButtons');confirm.append(el('p','','This erases Slimefall progress on this device. Export a backup first if you want to keep it.'),button('Export backup',exportSave),button('Confirm reset',()=>{
@@ -523,11 +538,136 @@ function frame(now){
    dirty=true;
   }
   if(screen==='combat')draw(paused?0:dt);
+  if(screen==='page'&&!$('dialog').open)advanceHaven(dt);
   if(hudClock>=.15){hudClock=0;updateHUD();}
   if(saveClock>=2){saveClock=0;E.accrue(meta);if(screen==='home')updateHome();if(dirty||screen==='home')save();}
   if(musicClock>=8){musicClock=0;ambient();}
  }
  requestAnimationFrame(frame);
+}
+
+function havenIcon(index){
+ const n=el('span','havenIcon');n.style.backgroundPosition=(index%4/3*100)+'% '+(Math.floor(index/4)/2*100)+'%';return n;
+}
+document.querySelectorAll('[data-haven-icon]').forEach(n=>{const i=Number(n.dataset.havenIcon);n.style.backgroundPosition=(i%4/3*100)+'% '+(Math.floor(i/4)/2*100)+'%';});
+function bankHaven(result,message){
+ if(!result)return;sound('coin');save();updateHome();notify(message+' · +'+result.coins+' coins, +'+result.dust+' stardust');
+}
+function renderHavenPage(){
+ const root=$('pageContent');root.replaceChildren();
+ if(page==='village'){
+  const intro=el('div','notice','Play a short activity between runs. Stardust restores the village. Each landmark adds 10% sanctuary income. Restoring all three grants a second free card reroll per wave.');
+  root.append(intro);
+  const activities=[['runes',0,'Runeforge','Remember glowing rune sequences. Short rounds, no time limit on your answer.'],['fishing',1,'Moonpool','Watch the float and reel at the bite. Three casts per peaceful trip.'],['stars',2,'Star map','Rotate crystal conduits to connect starlight. A puzzle with no timer.']];
+  for(const [key,index,name,description]of activities){
+   const c=el('article','frame activityCard');c.append(havenIcon(index),el('h3','',name),el('p','',description),button('Visit '+name,()=>openPage(key),false,'primary'));root.append(c);
+  }
+  root.append(el('h2','sectionTitle','Restore the village'),el('p','notice','✧ '+meta.haven.dust+' stardust available'));
+  for(const b of HV.buildings){
+   const done=meta.haven.restored.includes(b.id),c=el('article','frame shopItem');
+   c.append(havenIcon(b.icon),el('h3','',b.name),el('p','',b.desc),button(done?'Restored':'Restore · '+b.cost+' stardust',()=>{
+    E.accrue(meta);if(HV.restore(meta,b.id)){sound('buy');save();updateHome();renderHavenPage();notify(b.name+' restored');}
+   },done||meta.haven.dust<b.cost,done?'':'primary'));root.append(c);
+  }
+  root.append(el('div','notice','Best rune sequence · '+meta.haven.best.runes+' | Best fishing trip · '+meta.haven.best.fish+'/3 | Best star-map score · '+meta.haven.best.stars));
+  return;
+ }
+ if(page==='runes'){
+  if(!havenGame||havenGame.kind!=='runes')havenGame=HV.memory();
+  return renderRunes(root);
+ }
+ if(page==='fishing'){
+  if(!havenGame||havenGame.kind!=='fish')havenGame=HV.fishing();
+  return renderFishing(root);
+ }
+ if(page==='stars'){
+  if(!havenGame||havenGame.kind!=='stars')havenGame=HV.puzzle();
+  return renderStars(root);
+ }
+}
+function renderRunes(root){
+ const s=havenGame,info=el('div','frame activityHeader');
+ info.append(havenIcon(0),el('h3','',s.phase==='watch'?'Watch the runes':s.phase==='input'?'Echo the pattern':s.phase==='won'?'Pattern restored':s.phase==='over'?'The forge is resting':'Awaken the forge'));
+ info.append(el('p','',s.phase==='input'?'Tap the runes in the order they glowed. '+s.position+'/'+s.sequence.length:s.phase==='watch'?'Listen and watch. Your turn follows the last glow.':'Round '+s.round+' · '+s.tries+' attempts left · '+s.earned+' stardust earned'));
+ root.append(info);
+ const grid=el('div','runeGrid');
+ for(let i=0;i<4;i++){
+  const pad=button('',()=>{
+   const result=HV.tapMemory(s,i,meta);
+   if(result.type==='ignored')return;
+   sound('rune'+i);
+   if(result.type==='win')bankHaven(result,'Pattern complete');
+   if(result.type==='mistake'){sound('hurt');notify(s.tries?'Try again. Replay the same pattern.':'Session complete. Earned rewards are kept.');}
+   renderHavenPage();
+  },s.phase!=='input','runePad'+(s.cue===i?' lit':''));
+  pad.setAttribute('aria-label',['Moon rune','Crystal rune','Sun rune','Leaf rune'][i]);pad.append(havenIcon(8+i));grid.append(pad);
+ }
+ root.append(grid);
+ const controls=el('div','miniActions');
+ if(['ready','input'].includes(s.phase))controls.append(button(s.phase==='ready'?'Watch pattern':'Replay pattern',()=>{HV.replayMemory(s);lastRuneCue=-1;renderHavenPage();},false,'primary'));
+ if(s.phase==='watch')controls.append(button('Watching…',()=>{},true));
+ if(s.phase==='won')controls.append(button('Next pattern',()=>{HV.nextMemory(s);lastRuneCue=-1;renderHavenPage();},false,'primary'));
+ if(s.phase==='over')controls.append(button('New session',()=>{havenGame=HV.memory();renderHavenPage();},false,'primary'));
+ controls.append(button('Back to village',showHome));root.append(controls);
+}
+function renderFishing(root){
+ const s=havenGame,c=el('div','frame activityHeader');
+ const title=s.phase==='bite'?'A bite! Reel now':s.phase==='waiting'?'The moonpool is listening':s.phase==='result'?(s.last?.miss?'It slipped away':HV.fishNames[s.last.fish]):'Cast into the moonlight';
+ c.append(havenIcon(1),el('h3','',title),el('p','',s.phase==='waiting'?'Wait for the float to flash.':s.phase==='bite'?'Tap REEL while the float glows.':'Cast '+s.attempt+'/3 · '+s.caught+' fish · '+s.earned+' stardust this trip'));
+ root.append(c);
+ const scene=el('div','pondScene');scene.append(el('div','waterRipple'),el('div','waterFloat'+(s.phase==='bite'?' bite':'')));
+ if(s.phase==='result'&&!s.last?.miss){const catchTag=el('div','catchTag',s.last.perfect?'Perfect catch!':'Caught!');scene.append(catchTag);}
+ root.append(scene);
+ const actions=el('div','miniActions');
+ if(s.phase==='waiting'||s.phase==='bite')actions.append(button('REEL',()=>{
+  const result=HV.reel(s,meta);
+  if(result.type==='catch')bankHaven(result,HV.fishNames[result.fish]+(result.perfect?' · perfect catch':''));
+  else if(result.type==='early')notify('Too soon. Wait for the glowing float.');
+  renderHavenPage();
+ },false,s.phase==='bite'?'primary':''));
+ else if(s.attempt<3)actions.append(button('Cast line',()=>{HV.cast(s);sound('pickup');renderHavenPage();},false,'primary'));
+ else actions.append(button('Another trip',()=>{havenGame=HV.fishing();renderHavenPage();},false,'primary'));
+ actions.append(button('Back to village',showHome));root.append(actions);
+ root.append(el('div','fishAlbum','Moonpool journal · '+meta.haven.fishBook.map(i=>HV.fishNames[i]).join(' · ')+(meta.haven.fishBook.length?'':'No discoveries yet')));
+}
+function starTile(mask,lit){
+ const color=lit?'#a8fff2':'#8799bc';let lines='';
+ for(const [bit,x,y]of [[1,50,0],[2,100,50],[4,50,100],[8,0,50]])if(mask&bit)lines+='<path d="M50 50 L'+x+' '+y+'" />';
+ return '<svg viewBox="0 0 100 100" aria-hidden="true"><g stroke="'+color+'" stroke-width="8" stroke-linecap="round" fill="none">'+lines+'</g><circle cx="50" cy="50" r="11" fill="'+color+'"/></svg>';
+}
+function renderStars(root){
+ const s=havenGame,c=el('div','frame activityHeader');
+ c.append(havenIcon(2),el('h3','',s.solved?'A new constellation':'Reconnect the starlight'),el('p','',s.solved?'Your rewards are already collected.':'Tap a tile to rotate it. Connect IN on the left to OUT on the right. No timer.'));
+ root.append(c);
+ const board=el('div','starBoard'),grid=el('div','starGrid');
+ const input=el('span','starPort input','IN'),output=el('span','starPort output','OUT');
+ input.style.top=(Math.floor(s.start/4)*25+12.5)+'%';output.style.top=(Math.floor(s.end/4)*25+12.5)+'%';
+ for(let i=0;i<16;i++){
+  const b=button('',()=>{
+   const result=HV.turnTile(s,i,meta);sound('ui');if(result)bankHaven(result,'Constellation completed');renderHavenPage();
+  },s.solved,'starTile'+(s.lit.includes(i)?' powered':''));
+  b.setAttribute('aria-label','Rotate star tile '+(i+1));b.innerHTML=starTile(s.cells[i],s.lit.includes(i));grid.append(b);
+ }
+ board.append(grid,input,output);root.append(board,el('p','miniStats',s.moves+' moves · '+s.hints+' hints'));
+ const actions=el('div','miniActions');
+ if(s.solved)actions.append(button('Next constellation',()=>{havenGame=HV.puzzle();renderHavenPage();},false,'primary'));
+ else actions.append(button('Hint · align one route tile',()=>{const result=HV.hint(s,meta);if(result)bankHaven(result,'Constellation completed');renderHavenPage();},false,'primary'));
+ actions.append(button('Back to village',showHome));root.append(actions);
+ root.append(el('p','notice','Hints lower the final reward. Every puzzle has a route. Glowing tiles are connected to the input.'));
+}
+function advanceHaven(dt){
+ if(!havenGame)return;
+ if(havenGame.kind==='runes'){
+  const phase=havenGame.phase,cue=havenGame.cue;HV.stepMemory(havenGame,dt);
+  if(cue!==havenGame.cue||phase!==havenGame.phase){
+   if(havenGame.cue>=0&&havenGame.cue!==lastRuneCue)sound('rune'+havenGame.cue);
+   lastRuneCue=havenGame.cue;renderHavenPage();
+  }
+ }
+ if(havenGame.kind==='fish'){
+  const phase=havenGame.phase,bite=HV.stepFish(havenGame,dt);
+  if(bite)sound('coin');if(phase!==havenGame.phase)renderHavenPage();
+ }
 }
 showHome();requestAnimationFrame(frame);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>notify('Offline cache unavailable. Your device save still works.'));

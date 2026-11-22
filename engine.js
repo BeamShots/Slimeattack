@@ -65,7 +65,7 @@ const milestones=[
  {id:'seventyfive',name:'World breaker',desc:'Clear wave 75.',goal:m=>m.best>=75,reward:{coins:2400,shards:25}},
  {id:'hundredwave',name:'Endless ascension',desc:'Clear wave 100.',goal:m=>m.best>=100,reward:{coins:4000,shards:40}}
 ];
-function fresh(now=Date.now()){return {version:1,forge:F.fresh(now),expedition:X.fresh(now),haven:H.town(),activeGuideSeen:false,coins:0,shards:0,best:0,kills:0,runs:0,upgrades:{blade:0,hull:0,pet:0,garden:0,luck:0},claimed:[],dex:{},idle:{bank:0,lastAt:now},settings:{sound:true,music:false,haptics:true,shake:true,effects:'balanced',numbers:true},run:null};}
+function fresh(now=Date.now()){return {version:1,forge:F.fresh(now),expedition:X.fresh(now),haven:H.town(),activeGuideSeen:false,coins:0,shards:0,best:0,kills:0,runs:0,upgrades:{blade:0,hull:0,pet:0,garden:0,luck:0},claimed:[],dex:{},idle:{bank:0,lastAt:now},settings:{auto:false,sound:true,music:false,haptics:true,shake:true,effects:'balanced',numbers:true},run:null};}
 const bound=(v,a,b)=>Number.isFinite(v)?Math.max(a,Math.min(b,v)):a;
 function normalize(raw,now=Date.now()){
  if(!raw||raw.version!==1||!raw.upgrades||!raw.idle)throw Error('This is not a Slimefall save.');
@@ -454,8 +454,8 @@ function drop(r,kind,x,y,value=0,owner=0){
  if(r.pickups.length>=32)r.pickups.shift();
  const p={id:r.nextPickup++,kind,x,y,life:kind==='rune'?1.8:7,value,owner};r.pickups.push(p);return p;
 }
-function collect(m,id){
- const r=m.run,events=[];if(!r||r.phase!=='fight')return events;
+function collect(m,id,finishingWave=false){
+ const r=m.run,events=[];if(!r||(r.phase!=='fight'&&!(finishingWave&&r.phase==='draft')))return events;
  const p=r.pickups.find(p=>p.id===id);if(!p)return events;
  r.pickups=r.pickups.filter(n=>n.id!==id);r.actions.collected++;
  r.energy=Math.min(100,r.energy+6+level(r,'magnet')*2);

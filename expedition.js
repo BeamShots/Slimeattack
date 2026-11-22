@@ -25,14 +25,25 @@ function pick(m,E,r){
   const c=E.cards.find(c=>c.id===id);return 60-Math.max(0,priority.indexOf(id))*2-(priority.includes(id)?0:45)+(style==='power'&&['power','infinity'].includes(id)?30:0)+(c?.requires?5:0);
  }
 }
+function collectDrops(m,E){
+ const r=m.run,events=[];if(!r||!['fight','draft'].includes(r.phase))return events;
+ for(const p of r.pickups.slice())events.push(...E.collect(m,p.id,true));return events;
+}
 function pilot(m,E,dt,random=Math.random){
  const r=m.run,events=[];if(!r||r.phase!=='fight')return events;
+ events.push(...collectDrops(m,E));
  r.pilotClock=(r.pilotClock||0)+dt;
  if(r.pilotClock>=.25){
   r.pilotClock%=.25;
-  for(const p of r.pickups.slice())events.push(...E.collect(m,p.id));
   const e=r.enemies.slice().sort((a,b)=>b.y-a.y)[0];
-  if(e){events.push(...E.ability(m,'frost'),...E.ability(m,'fury'));if(r.energy>=100)events.push(...E.soulBurst(m));events.push(...E.attack(m,e.id,random,false,'hold'));}
+  if(e){
+   events.push(...E.ability(m,'frost'),...E.ability(m,'fury'));
+   if(r.energy>=100)events.push(...E.soulBurst(m));
+   if(r.enemies.length>=3&&r.slashCD<=0)events.push(...E.swipe(m,r.enemies.slice().sort((a,b)=>b.y-a.y).slice(0,8).map(e=>({x:e.x,y:e.y}))));
+   const target=r.enemies.slice().sort((a,b)=>b.y-a.y)[0];
+   if(target)events.push(...E.attack(m,target.id,random,false,target.parryTime>0||target.weakTime>0?'tap':'hold'));
+   events.push(...collectDrops(m,E));
+  }
  }
  return events;
 }
@@ -60,7 +71,7 @@ function settle(m,E,F,budget=4000){
  while(x.carry>=.1-1e-8&&steps<budget){
   if(m.run.phase==='draft'&&!x.trial){E.choose(m,pick(m,E,m.run),()=>rng(x));continue;}
   const s=shadow(m,E),t=x.trial;
-  pilot(s,E,.1,()=>rng(x));E.step(s,.1,()=>rng(x));
+  pilot(s,E,.1,()=>rng(x));E.step(s,.1,()=>rng(x));collectDrops(s,E);
   t.run=s.run;t.coins=s.coins;t.shards=s.shards;t.kills=s.kills;t.best=s.best;
   x.carry=Math.max(0,x.carry-.1);x.report.seconds+=.1;steps++;
   if(t.run.phase==='over'){
@@ -90,6 +101,6 @@ function retryFallen(m,E,now=Date.now()){
  const enabled=m.expedition.enabled,style=m.expedition.style;m.expedition=fresh(now);m.expedition.enabled=enabled;m.expedition.style=style;return true;
 }
 function resetReport(m){m.expedition.report=fresh().report;}
-const api={fresh,normalize,pick,pilot,addElapsed,settle,takeControl,retry,retryFallen,resetReport};
+const api={fresh,normalize,pick,pilot,collectDrops,addElapsed,settle,takeControl,retry,retryFallen,resetReport};
 if(typeof module!=='undefined')module.exports=api;root.Expedition=api;
 })(globalThis);

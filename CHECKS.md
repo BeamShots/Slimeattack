@@ -1,17 +1,18 @@
-# Eternal Expedition v5.0.0 verification
+# Eternal Expedition v5.1.0 verification
 
-211 automated checks passed in this build:
+240 automated checks passed in this build:
 
 | Area | Checks |
 | --- | ---: |
+| Number abbreviations | 8 |
 | Core engine | 36 |
 | Realm, enemy and power expansion | 24 |
 | Slashes, counters, drops and Soul Burst | 29 |
 | Village games and restoration | 20 |
 | Moonforge, orders, research and invocations | 14 |
-| Offline waves, migration, accounting and retries | 18 |
+| Offline waves, migration, accounting, retries and Auto collection | 22 |
 | Early, late and active-input progression simulations | 9 |
-| Simulated UI interactions | 59 |
+| Simulated UI interactions | 76 |
 | Service-worker offline cache | 1 |
 | Sound synthesis and mute | 1 |
 
@@ -21,7 +22,9 @@ Offline tests cover an old wave-155 save, ten years of uncapped passive income, 
 
 UI checks exercise the new home entries, live crafting without pausing combat, conjuring, merges, healing invocation, fill-board, guild delivery, research, automatic draft choices, manual control, blocked-wave retry, saved manual defeat at wave 155, policy controls, report dismissal, asynchronous return overlay, interrupted catch-up and returning with offline mode disabled. Existing activity, settings, import/export, battle and navigation tests still pass.
 
-The service-worker harness installs all 25 runtime URLs and serves every one with network access disabled. Every shipped JavaScript file passes Node syntax checking. Local asset references and ZIP root layout were checked.
+The service-worker harness installs all 26 runtime URLs and serves every one with network access disabled. Every shipped JavaScript file passes Node syntax checking. Local asset references and ZIP root layout were checked.
+
+v5.1 adds explicit coverage of Auto fighting on every village page and all three minigames, automatic choices without opening a draft overlay, regular menus versus explicit Pause, quiet background defeat, every orb type, empty-field orb collection, final-wave drops, saved Auto preference, a complete separate application reload, Auto OFF stopping hidden and offline progression, live purchase affordances and K/M/B/T/Qa notation across wallets, costs and damage.
 
 ## Limits of this verification
 

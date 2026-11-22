@@ -1,4 +1,4 @@
-# Slimefall · Eternal Expedition v5.0.0
+# Slimefall · Eternal Expedition v5.1.0
 
 A portrait, offline-capable slime wave game. No build tools, accounts, subscriptions or external runtime dependencies.
 
@@ -8,7 +8,7 @@ A portrait, offline-capable slime wave game. No build tools, accounts, subscript
 2. Extract this ZIP. Upload **all files together** into the same GitHub repository directory that currently contains your game's `index.html`. Replace the old files. Every file belongs beside `index.html`; there are no asset folders.
 3. Let GitHub Pages finish publishing. Open the same website online once.
 4. Close every old game tab and installed game window, then reopen the game. An already-running older version can need this close/reopen cycle before it uses the new release.
-5. The header must read **ETERNAL EXPEDITION · v5.0**. Settings also shows v5.0.0. If it still says Soul Rush or Moonhaven, the new release is not loaded yet.
+5. The header must read **ETERNAL EXPEDITION · v5.1**. Settings also shows v5.1.0. If it still says Soul Rush or Moonhaven, the new release is not loaded yet.
 
 Keep the same website address and game directory to keep its local save. Do not clear website storage or uninstall to force an update. Uploading this ZIP does not itself publish to GitHub; upload its extracted contents.
 
@@ -17,13 +17,25 @@ Keep the same website address and game directory to keep its local save. Do not 
 - **Eternal expedition**, on the village screen: offline results, automatic card policy, offline on/off and retry controls.
 - **Moonforge & orders**, on the village screen: persistent merge board and commissions.
 - **Stardust research**, on the village screen: six research paths with no level cap.
-- **Open forge** and **Orders**, underneath the battlefield: work on the forge while combat keeps running. Opening it enables the spirit pilot. Close it and toggle Pilot OFF whenever you want manual evolution choices again.
+- **Open forge** and **Orders**, underneath the battlefield: work on the forge while combat keeps running. Opening it enables Auto. The saved Auto toggle in the header works from every screen. Toggle Auto OFF to restore manual evolution choices and stop offline wave progression.
+
+## One-click Auto (v5.1)
+
+The **Auto ON/OFF** button is always available in the header, including the village and activity pages. It saves its preference and restores it after reload and on new runs. With no run yet, turning Auto ON starts one.
+
+Auto handles attacks, swipes, counter/core openings, Frost nova, Overcharge, Soul Burst, every dropped coin/gem/time/rune orb and evolution choices. It keeps fighting while you visit the village, merge runes, fish, play the memory game or star map, inspect your build, research or buy permanent upgrades. Ordinary menus do not pause Auto. The explicit battle **Pause** menu pauses it until you resume.
+
+A status bar shows the current wave from every screen. A defeat stops that run until you retry; it does not interrupt an activity or automatically spend your upgrade currencies. Tap the stopped status to reach upgrade/retry controls. Auto OFF stops hidden-screen fighting and disables offline waves. Your companion still attacks during a manually played battle, as before.
+
+## Consistent large numbers (v5.1)
+
+Wallets, costs, income rates, rewards, research resources, damage and damage popups use the same notation: **K, M, B, T, Qa, Qi, Sx, Sp, Oc, No, Dc**, followed by further thousand-fold suffixes. Examples: 1,000 → 1K, 12,300 → 12.3K, 1,000,000 → 1M, 10^15 → 1Qa. Rounded values promote to the next suffix rather than showing 1000K. Full numeric values are retained for all calculations and purchases.
 
 ## Smart offline waves
 
-Offline waves are ON by default after starting or continuing a run. Leave the game with that run saved. On your next visit, it simulates the elapsed absence using the same combat engine: your cards, permanent upgrades, companion, real enemy types, movement, shields, poison, healing, boss mechanics and revivals.
+Tap **Auto ON** in the header. It enables both foreground Auto and offline waves. Leave the game with that run saved. On your next visit, it simulates the elapsed absence using the same combat engine: your cards, permanent upgrades, companion, real enemy types, movement, shields, poison, healing, boss mechanics and revivals.
 
-The pilot attacks every quarter-second, catches drops and activates ready powers. It chooses evolutions according to **balanced**, **power** or **sustain**. It does not consume your forge runes or buy upgrades. Balanced heals when wounded and otherwise prefers damage and automatic skills. Results can differ from skilled manual play.
+The pilot attacks every quarter-second, uses swipes and counter/core windows, catches all drop types every update and activates ready powers. It also collects the final kill’s drops before advancing the wave. It chooses evolutions according to **balanced**, **power** or **sustain**. It does not consume your forge runes or buy upgrades. Balanced heals when wounded and otherwise prefers damage and automatic skills. Results can differ from skilled manual play.
 
 Successful waves commit their coins, crystals, kills and forge rewards once. A defeated wave gives no partial loot: the simulation rolls that wave back, records the failure and stops there. It stays stopped across future visits until you press **Retry wave**. Upgrade first, then retry with a full ward. The wave and run cards are kept.
 

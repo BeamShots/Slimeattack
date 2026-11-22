@@ -6,7 +6,7 @@ let meta=E.fresh(),storageFailed=false;
 try{const saved=localStorage.getItem(KEY);if(saved)meta=E.normalize(JSON.parse(saved));}catch{storageFailed=true;}
 E.accrue(meta);F.accrue(meta);X.addElapsed(meta);
 let screen='home',page='',paused=true,toastTimer,bannerTimer,dirty=false,lastTime=performance.now(),saveClock=0,hudClock=0,musicClock=0;
-let heldPointer=null,forgeSelected=-1,forgeTab='board',pilotOn=false,catchingUp=false,catchupGeneration=0;
+let heldPointer=null,forgeSelected=-1,forgeTab='board',pilotOn=meta.settings.auto,autoPaused=false,catchingUp=false,catchupGeneration=0;
 let lastPop=0,lastCrit=0,lastPower=0;
 let specialFx=[];
 let particles=[],texts=[],lines=[],rings=[],audio=null,installPrompt=null,previewCard=null;
@@ -66,6 +66,7 @@ function dialog(title,content){
  heldPointer=null;paused=true;$('dialogTitle').textContent=title;$('dialogContent').replaceChildren(content);if(!$('dialog').open)$('dialog').showModal();
 }
 function closeDialog(){
+ autoPaused=false;
  $('dialog').close();
  if(screen==='combat'&&meta.run?.phase==='fight')paused=false;
  if(meta.run?.phase==='over'&&screen==='combat')showHome();
@@ -78,24 +79,24 @@ function showScreen(name){
  for(const id of ['home','combat','page'])$(id).classList.toggle('active',id===name);
  $('draftOverlay').hidden=!(name==='combat'&&meta.run?.phase==='draft');
 }
-function showHome(){$('forgeDrawer').hidden=true;havenGame=null;heldPointer=null;paused=true;$('dialog').close();showScreen('home');updateHome();updateHUD();save();}
+function showHome(){autoPaused=false;$('forgeDrawer').hidden=true;havenGame=null;heldPointer=null;paused=true;$('dialog').close();showScreen('home');updateHome();updateHUD();save();}
 function updateHome(){
  $('coins').textContent='● '+compact(meta.coins);
  $('shards').textContent='✦ '+compact(meta.shards);
- $('homeStats').textContent='BEST WAVE '+meta.best+'  ·  '+meta.kills+' SLIMES DEFEATED';
+ $('homeStats').textContent='BEST WAVE '+meta.best+'  ·  '+compact(meta.kills)+' SLIMES DEFEATED';
  const active=meta.run&&meta.run.phase!=='over';
  $('resume').hidden=!active;$('resume').textContent=active?'Continue · wave '+meta.run.wave:'Continue your run';
  $('play').firstChild.textContent=active?'NEW RUN ':'ENTER THE RIFT ';
- $('idleInfo').textContent=compact(meta.idle.bank)+' coins ready · '+Math.round(E.idleRate(meta)*60)+'/min';
+ $('idleInfo').textContent=compact(meta.idle.bank)+' coins ready · '+compact(E.idleRate(meta)*60)+'/min';
  $('claimIdle').disabled=meta.idle.bank<1;
- $('havenStatus').textContent='✧ '+compact(meta.haven.dust)+' stardust · '+meta.forge.orders+' guild orders fulfilled';
+ $('havenStatus').textContent='✧ '+compact(meta.haven.dust)+' stardust · '+compact(meta.forge.orders)+' guild orders fulfilled';
  updateExpeditionEntry();
  $('villageScene').dataset.restored=String(meta.haven.restored.length);
  $('restorationMarks').replaceChildren(...meta.haven.restored.map(id=>{const b=HV.buildings.find(b=>b.id===id),n=havenIcon(b.icon);n.classList.add('restoredMark',id+'Mark');n.setAttribute('aria-label',b.name+' restored');return n;}));
 }
 function begin(){
- meta.run=E.start(meta);pilotOn=false;$('forgeDrawer').hidden=true;paused=false;particles=[];texts=[];rings=[];lines=[];specialFx=[];
- $('dialog').close();showScreen('combat');updateHUD();save();banner('WAVE 1 · THE GLADE');sound('power');if(!meta.activeGuideSeen)showActionGuide();
+ const offline=meta.expedition.enabled;meta.run=E.start(meta);meta.expedition.enabled=offline;pilotOn=meta.settings.auto;autoPaused=false;$('forgeDrawer').hidden=true;paused=false;particles=[];texts=[];rings=[];lines=[];specialFx=[];
+ $('dialog').close();showScreen('combat');updateHUD();save();banner('WAVE 1 · THE GLADE');sound('power');if(!meta.activeGuideSeen&&!pilotOn)showActionGuide();
 }
 $('play').onclick=()=>{
  sound('ui');
@@ -110,10 +111,10 @@ function resumeRun(){
  if(meta.expedition.state==='blocked'){openPage('expedition');return;}
  X.takeControl(meta);$('dialog').close();showScreen('combat');paused=false;
  if(meta.run.phase==='draft')showDraft();
- updateHUD();if(!meta.activeGuideSeen)showActionGuide();
+ updateHUD();if(!meta.activeGuideSeen&&!pilotOn)showActionGuide();
 }
 $('claimIdle').onclick=()=>{
- sound('coin');E.accrue(meta);const coins=E.claimIdle(meta);save();updateHome();notify(coins?'Sanctuary collected · +'+coins+' coins':'Your sanctuary is growing.');vibrate(12);
+ sound('coin');E.accrue(meta);const coins=E.claimIdle(meta);save();updateHome();notify(coins?'Sanctuary collected · +'+compact(coins)+' coins':'Your sanctuary is growing.');vibrate(12);
 };
 document.querySelectorAll('[data-page]').forEach(n=>n.onclick=()=>{sound('ui');openPage(n.dataset.page);});
 $('back').onclick=showHome;
@@ -131,10 +132,10 @@ function renderPage(){
   for(const [id,u]of Object.entries(E.upgrades)){
    const panel=el('article','shopItem frame'),row=el('div','row'),copy=el('div','description'),level=meta.upgrades[id],cost=E.upgradeCost(meta,id);
    copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+level+' / '+u.max),el('p','',u.desc));
-   const purchase=button(level>=u.max?'MAX LEVEL':cost+' '+(u.currency==='coins'?'coins':'crystals'),()=>{
+   const purchase=button(level>=u.max?'MAX LEVEL':compact(cost)+' '+(u.currency==='coins'?'coins':'crystals'),()=>{
     E.accrue(meta);if(E.buy(meta,id)){sound('buy');vibrate(12);save();updateHome();renderPage();}
    },level>=u.max||meta[u.currency]<cost,'primary');
-   row.append(icon(u.icon),copy);panel.append(row,purchase);root.append(panel);
+   purchase.dataset.buyUpgrade=id;row.append(icon(u.icon),copy);panel.append(row,purchase);root.append(panel);
   }
  }
  if(page==='collection'){
@@ -148,10 +149,10 @@ function renderPage(){
  if(page==='milestones'){
   for(const m of E.milestones){
    const claimed=meta.claimed.includes(m.id),ready=m.goal(meta),panel=el('article','frame shopItem');
-   panel.append(el('h3','',m.name),el('p','',m.desc),el('div','levelTag',m.reward.coins+' coins · '+m.reward.shards+' crystals'),button(claimed?'Claimed':ready?'Claim reward':'In progress',()=>{
+   panel.append(el('h3','',m.name),el('p','',m.desc),el('div','levelTag',compact(m.reward.coins)+' coins · '+compact(m.reward.shards)+' crystals'),button(claimed?'Claimed':ready?'Claim reward':'In progress',()=>{
     if(E.claimMilestone(meta,m.id)){sound('coin');save();updateHome();renderPage();}
    },claimed||!ready,ready&&!claimed?'primary':''));
-   root.append(panel);
+   panel.lastElementChild.dataset.claimMilestone=m.id;root.append(panel);
   }
  }
  if(page==='bestiary'){
@@ -169,15 +170,16 @@ function enemyPortrait(type){
 }
 function updateHUD(){
  $('coins').textContent='● '+compact(meta.coins);$('shards').textContent='✦ '+compact(meta.shards);
+ updateAutoControls();
  const r=meta.run;if(!r)return;
- $('pilotToggle').textContent='Pilot · '+(pilotOn?'ON':'OFF');
+ $('pilotToggle').textContent='Auto · '+(pilotOn?'ON':'OFF');
  $('pilotToggle').classList.toggle('on',pilotOn);
  $('waveLabel').textContent='Wave '+r.wave+(r.wave%5===0?' · BOSS':'');
  const area=E.realm(r.wave);$('arena').dataset.realm=String(area);
  $('realmLabel').textContent=E.realms[area]+' · '+E.conditions[r.modifier||'calm'].name+' ⓘ'+(r.wave>40?' · Ascension '+(r.wave-40):'');
  $('realmLabel').title=E.conditions[r.modifier||'calm'].desc;
  $('health').textContent='♥ '+Math.ceil(r.hp)+' / '+r.maxHp;
- $('battleStats').textContent=Math.round(E.damage(meta,r))+' DMG · '+r.kills+' KILLS';
+ $('battleStats').textContent=compact(E.damage(meta,r))+' DMG · '+compact(r.kills)+' KILLS';
  $('waveProgress').style.width=(r.target?r.resolved/r.target*100:0)+'%';
  $('combo').textContent=r.combo>=5?r.combo+'× COMBO':'';
  $('actionInfo').textContent=(r.slashCD>0?'SLASH '+r.slashCD.toFixed(1)+'s':'SWIPE TO SLASH')+' · '+(r.bounty.done?'BOUNTY COMPLETE':r.bounty.label+' '+r.bounty.progress+'/'+r.bounty.goal);
@@ -192,14 +194,15 @@ function updateHUD(){
  $('petStatus').textContent='Swipe groups · tap cyan cores / amber counters · '+(1+(r.cards.familiar||0))+' target'+((r.cards.familiar||0)>0?'s':'')+' · '+((r.cards.haste||0)>0?'accelerated':'auto attacking');
 }
 function showDraft(){
+ if(pilotOn){autoChoose();return;}
  paused=false;$('draftOverlay').hidden=false;const r=meta.run;
- $('draftWave').textContent='WAVE '+r.wave+' CLEARED · +'+(8+r.wave*2)+' BASE COINS';
+ $('draftWave').textContent='WAVE '+r.wave+' CLEARED · +'+compact(8+r.wave*2)+' BASE COINS';
  $('draftCards').replaceChildren();
  for(const id of r.offers){
   const c=E.cards.find(c=>c.id===id),n=button('',()=>{
    if(E.choose(meta,id)){paused=false;sound(c.rarity==='legendary'?'power':'buy');vibrate(20);save();$('draftOverlay').hidden=true;updateHUD();banner('WAVE '+meta.run.wave);dirty=true;}
   },false,'upgradeCard '+c.rarity);
-  const copy=el('div','cardCopy');copy.append(el('div','rarity',c.rarity),el('h3','',c.name),el('p','',c.desc),el('span','nextLevel','LEVEL '+Math.min(c.max,(r.cards[id]||0)+1)+(r.cards[id]?' · STACK THIS POWER':' · NEW POWER')));
+  const copy=el('div','cardCopy');copy.append(el('div','rarity',c.rarity),el('h3','',c.name),el('p','',c.desc),el('span','nextLevel','LEVEL '+compact(Math.min(c.max,(r.cards[id]||0)+1))+(r.cards[id]?' · STACK THIS POWER':' · NEW POWER')));
   if((r.cards[id]||0)+1===3&&['chain','poison','blast'].includes(id))copy.append(el('span','nextLevel','✦ EVOLUTION · '+{chain:'Guaranteed chains',poison:'Poison death-bursts',blast:'Larger explosion radius'}[id]));
   n.append(icon(c.icon),copy);$('draftCards').append(n);
  }
@@ -216,26 +219,28 @@ $('realmLabel').onclick=()=>{
 function showBuild(){
  const r=meta.run,body=el('div');
  if(!r)return;
- body.append(el('p','',Math.round(E.damage(meta,r))+' damage · '+r.kills+' kills · '+r.bestCombo+' best combo'));
+ body.append(el('p','',compact(E.damage(meta,r))+' damage · '+compact(r.kills)+' kills · '+compact(r.bestCombo)+' best combo'));
  const list=el('div','buildList');
- for(const [id,n]of Object.entries(r.cards))if(n){const c=E.cards.find(c=>c.id===id);list.append(el('span','buildChip',c.name+' ×'+n));}
+ for(const [id,n]of Object.entries(r.cards))if(n){const c=E.cards.find(c=>c.id===id);list.append(el('span','buildChip',c.name+' ×'+compact(n)));}
  if(!list.children.length)body.append(el('p','','Clear a wave to choose your first evolution.'));
  body.append(list,el('p','notice','Combos: Toxic bloom + Living lightning spreads poison. Permafrost + Wildfire doubles splash against slowed slimes. Prism reactor makes lightning stronger. Companion volleys inherit your card powers.'));
  dialog('Your evolving build',body);
 }
 $('buildInfo').onclick=showBuild;
 $('pause').onclick=()=>{
+ autoPaused=true;
  const body=el('div','menuButtons');body.append(button('Resume',closeDialog,false,'primary'),button('Inspect my cards',showBuild),button('Save & home',showHome));dialog('Take a breath',body);sound('ui');
 };
 for(const id of ['frost','fury','burst'])$(id).onclick=()=>{if(paused)return;processEvents(E.ability(meta,id));dirty=true;updateHUD();};
 function summary(){
  paused=true;const r=meta.run,body=el('div','summary');
- body.append(el('div','eyebrow',r.wave>meta.best?'A NEW FRONTIER':'THE WARD HAS FALLEN'),el('div','big','Wave '+r.wave),el('p','',r.kills+' kills · '+r.earned+' coins kept · '+r.bestCombo+' best combo'));
+ body.append(el('div','eyebrow',r.wave>meta.best?'A NEW FRONTIER':'THE WARD HAS FALLEN'),el('div','big','Wave '+r.wave),el('p','',compact(r.kills)+' kills · '+compact(r.earned)+' coins kept · '+compact(r.bestCombo)+' best combo'));
  $('forgeDrawer').hidden=true;
  body.append(el('p','notice',r.actions.swipes+' slashes · '+r.actions.weak+' core breaks · '+r.actions.parries+' counters · '+r.actions.bursts+' Soul Bursts'));
  const menu=el('div','menuButtons');menu.append(button('Retry wave '+r.wave,()=>{X.retryFallen(meta,E);save();resumeRun();},false,'primary'),button('Try another build',begin),button('Ascend & upgrade',()=>{$('dialog').close();openPage('workshop');}),button('Return home',showHome));body.append(menu);dialog('The power stays with you',body);save();
 }
 function processEvents(events){
+ if(screen!=='combat'||$('dialog').open){for(const e of events){if(e.type==='wave')resolveWave(e.wave);if(e.type==='over'){save();updateAutoControls();updateExpeditionEntry();}}return;}
  for(const e of events){
   if(e.type==='slash'){
    sound('slash');vibrate(e.hits>=3?25:12);
@@ -247,20 +252,20 @@ function processEvents(events){
    texts.push({x:e.x,y:e.y,text:e.type==='parry'?'PERFECT COUNTER':'CORE BREAK',color:e.type==='parry'?'#ffe395':'#b8ffff',life:1,max:1,big:true});
   }
   if(e.type==='soulBurst'){sound('burst');vibrate(35);banner('SOUL BURST');specialFx.push({kind:'nova',x:.5,y:.55,life:1,max:1});}
-  if(e.type==='bounty'){sound('coin');banner('BOUNTY CLEARED · +'+e.coin+' COINS +1 CRYSTAL');specialFx.push({kind:'nova',x:.5,y:.4,life:.5,max:.5});}
+  if(e.type==='bounty'){sound('coin');banner('BOUNTY CLEARED · +'+compact(e.coin)+' COINS +1 CRYSTAL');specialFx.push({kind:'nova',x:.5,y:.4,life:.5,max:.5});}
   if(e.type==='pickup'){sound('pickup');addBurst(e.x,e.y,e.kind==='rune'?'#c9a6ff':'#ffdf87',7);texts.push({x:e.x,y:e.y,text:e.kind==='rune'?'RIFT CAUGHT':'+ENERGY',color:'#ffe9a7',life:.7,max:.7,big:false});}
   if(e.type==='bombPop'){sound('thunder');specialFx.push({kind:'collapse',x:e.x,y:e.y,life:.6,max:.6});}
   if(e.type==='runeCast')specialFx.push({kind:'summon',x:e.x,y:e.y,life:.4,max:.4});
   if(e.type==='damage'){
    if(e.kind==='crit')sound('crit');
-   if(meta.settings.numbers)texts.push({x:e.x,y:e.y,text:e.kind==='crit'?'CRIT '+Math.ceil(e.amount):String(Math.max(1,Math.round(e.amount))),color:e.kind==='crit'?'#ffe184':e.kind==='poison'?'#d5a2ff':'#e9ffff',life:.7,max:.7,big:e.kind==='crit'});
+   if(meta.settings.numbers)texts.push({x:e.x,y:e.y,text:e.kind==='crit'?'CRIT '+compact(Math.ceil(e.amount)):compact(Math.max(1,Math.round(e.amount))),color:e.kind==='crit'?'#ffe184':e.kind==='poison'?'#d5a2ff':'#e9ffff',life:.7,max:.7,big:e.kind==='crit'});
   }
   if(e.type==='kill'){
    sound('pop');addBurst(e.x,e.y,enemyColors[e.color],e.boss?23:10);
    if(e.boss){sound('coin');banner('BOSS SHATTERED');vibrate(35);}
    dirty=true;
   }
-  if(e.type==='shards')texts.push({x:e.x,y:e.y,text:'+'+e.amount+' CRYSTAL',color:'#e5b6ff',life:1.3,max:1.3,big:true});
+  if(e.type==='shards')texts.push({x:e.x,y:e.y,text:'+'+compact(e.amount)+' CRYSTAL',color:'#e5b6ff',life:1.3,max:1.3,big:true});
   if(e.type==='bolt')lines.push({...e,life:.18,max:.18});
   if(e.type==='burst'){rings.push({...e,life:.35,max:.35});specialFx.push({kind:e.color==='#c38dff'?'poisonCloud':'fireBurst',x:e.x,y:e.y,life:.35,max:.35});}
   if(e.type==='pet'){sound('pet');lines.push({type:'bolt',x:.5,y:.99,x2:e.x,y2:e.y,color:'#91fbe7',life:.16,max:.16});}
@@ -286,9 +291,9 @@ function processEvents(events){
    sound('hurt');vibrate(25);
    if(meta.settings.shake&&meta.settings.effects!=='calm'){$('arena').classList.remove('shake');void $('arena').offsetWidth;$('arena').classList.add('shake');}
   }
-  if(e.type==='combo'){sound('coin');banner(e.amount+'× COMBO · +3 COINS');}
+  if(e.type==='combo'){sound('coin');banner(compact(e.amount)+'× COMBO · +3 COINS');}
   if(e.type==='boss'){sound('power');banner(E.enemyNames[e.enemyType??meta.run.enemies.find(e=>e.boss)?.type??7].toUpperCase());}
-  if(e.type==='wave'){F.wave(meta,e.wave);heldPointer=null;sound('draft');vibrate(20);if(pilotOn){E.choose(meta,X.pick(meta,E,meta.run));$('draftOverlay').hidden=true;banner('WAVE '+meta.run.wave+' · AUTO EVOLVED');if(!$('forgeDrawer').hidden)renderForge($('drawerContent'));}else showDraft();save();}
+  if(e.type==='wave'){resolveWave(e.wave);}
   if(e.type==='over'){sound('over');summary();}
  }
  const mode=meta.settings.effects;
@@ -493,11 +498,11 @@ function settings(){
   if(installPrompt){await installPrompt.prompt();installPrompt=null;}else notify('Browser menu → Install app / Add to home screen. Load online once for offline play.');
  }),button('Reset Slimefall',()=>{
   const confirm=el('div','menuButtons');confirm.append(el('p','','This erases Slimefall progress on this device. Export a backup first if you want to keep it.'),button('Export backup',exportSave),button('Confirm reset',()=>{
-   meta=E.fresh();particles=[];texts=[];rings=[];lines=[];save();showHome();
+   meta=E.fresh();pilotOn=meta.settings.auto;autoPaused=false;particles=[];texts=[];rings=[];lines=[];save();showHome();
   }));dialog('Reset this save?',confirm);
  }));
  if(storageFailed)menu.prepend(el('p','notice','Device saving is unavailable or a previous save could not be read. Export a backup to keep this session.'));
- menu.prepend(el('p','notice','Eternal Expedition · v5.0.0 · Unlimited sanctuary income · Smart offline waves'),button('Check for game update',checkUpdate));
+ menu.prepend(el('p','notice','Eternal Expedition · v5.1.0 · Unlimited sanctuary income · Smart offline waves'),button('Check for game update',checkUpdate));
  dialog('Settings',menu);
 }
 $('settings').onclick=()=>{sound('ui');settings();};
@@ -519,7 +524,7 @@ $('import').onchange=async event=>{
   if(file.size>3e6)throw Error('Too large');
   const imported=E.normalize(JSON.parse(await file.text()));
   const menu=el('div','menuButtons');menu.append(el('p','','Replace Slimefall with this imported save? Tideforge saves are separate.'),button('Export current backup',exportSave),button('Use imported save',()=>{
-   meta=imported;E.accrue(meta);F.accrue(meta);X.addElapsed(meta);save();showHome();catchUp();notify('Your Slimefall save is restored.');
+   meta=imported;pilotOn=meta.settings.auto;autoPaused=false;E.accrue(meta);F.accrue(meta);X.addElapsed(meta);save();showHome();catchUp();notify('Your Slimefall save is restored.');
   },false,'primary'));dialog('Restore a save',menu);
  }catch{notify('That file is not a valid Slimefall save.');}
  finally{event.target.value='';}
@@ -539,16 +544,18 @@ function frame(now){
  const dt=Math.max(0,Math.min(.05,(now-lastTime)/1000));lastTime=now;
  if(!document.hidden&&!catchingUp){
   hudClock+=dt;saveClock+=dt;musicClock+=dt;
-  if(screen==='combat'&&!paused&&!$('dialog').open&&meta.run?.phase==='fight'){
-   if(pilotOn)processEvents(X.pilot(meta,E,dt));
-   if(meta.run.phase==='fight')processEvents(E.step(meta,dt));
-   if(heldPointer&&!heldPointer.swiping&&meta.run.phase==='fight'){
+  const autoRunning=pilotOn&&!autoPaused&&meta.expedition.state!=='blocked';
+  if(autoRunning&&meta.run?.phase==='draft')autoChoose();
+  if(meta.run?.phase==='fight'&&meta.expedition.state!=='blocked'&&(autoRunning||(screen==='combat'&&!paused&&!$('dialog').open))){
+   if(autoRunning)processEvents(X.pilot(meta,E,dt));
+   if(meta.run.phase==='fight'){const events=E.step(meta,dt);if(autoRunning)events.push(...X.collectDrops(meta,E));processEvents(events);}
+   if(screen==='combat'&&!paused&&!$('dialog').open&&heldPointer&&!heldPointer.swiping&&meta.run.phase==='fight'){
     heldPointer.clock-=dt;
     if(heldPointer.clock<=0){heldPointer.clock=.16;strikeAt(heldPointer.x,heldPointer.y,false);}
    }
    dirty=true;
   }
-  if(screen==='combat')draw(paused?0:dt);
+  if(screen==='combat')draw((paused&&!autoRunning)?0:dt);
   if(screen==='page'&&!$('dialog').open)advanceHaven(dt);
   if(hudClock>=.15){hudClock=0;updateHUD();}
   if(saveClock>=2){saveClock=0;E.accrue(meta);const beforeSparks=meta.forge.sparks;F.accrue(meta);if(beforeSparks!==meta.forge.sparks){if(!$('forgeDrawer').hidden)renderForge($('drawerContent'));else if(screen==='page'&&page==='forge')renderForge($('pageContent'));}meta.expedition.lastAt=Date.now();if(screen==='home')updateHome();if(screen==='page'&&page==='expedition')renderPage();for(const n of document.querySelectorAll('.forgeBalance'))n.textContent=compact(meta.forge.sparks)+' sparks · ✧ '+compact(meta.haven.dust)+' dust';save();}
@@ -562,7 +569,7 @@ function havenIcon(index){
 }
 document.querySelectorAll('[data-haven-icon]').forEach(n=>{const i=Number(n.dataset.havenIcon);n.style.backgroundPosition=(i%4/3*100)+'% '+(Math.floor(i/4)/2*100)+'%';});
 function bankHaven(result,message){
- if(!result)return;sound('coin');save();updateHome();notify(message+' · +'+result.coins+' coins, +'+result.dust+' stardust');
+ if(!result)return;sound('coin');save();updateHome();notify(message+' · +'+compact(result.coins)+' coins, +'+compact(result.dust)+' stardust');
 }
 function renderHavenPage(){
  const root=$('pageContent');root.replaceChildren();
@@ -573,7 +580,7 @@ function renderHavenPage(){
   for(const [key,index,name,description]of activities){
    const c=el('article','frame activityCard');c.append(havenIcon(index),el('h3','',name),el('p','',description),button('Visit '+name,()=>openPage(key),false,'primary'));root.append(c);
   }
-  root.append(el('h2','sectionTitle','Restore the village'),el('p','notice','✧ '+meta.haven.dust+' stardust available'));
+  root.append(el('h2','sectionTitle','Restore the village'),el('p','notice','✧ '+compact(meta.haven.dust)+' stardust available'));
   for(const b of HV.buildings){
    const done=meta.haven.restored.includes(b.id),c=el('article','frame shopItem');
    c.append(havenIcon(b.icon),el('h3','',b.name),el('p','',b.desc),button(done?'Restored':'Restore · '+b.cost+' stardust',()=>{
@@ -599,7 +606,7 @@ function renderHavenPage(){
 function renderRunes(root){
  const s=havenGame,info=el('div','frame activityHeader');
  info.append(havenIcon(0),el('h3','',s.phase==='watch'?'Watch the runes':s.phase==='input'?'Echo the pattern':s.phase==='won'?'Pattern restored':s.phase==='over'?'The forge is resting':'Awaken the forge'));
- info.append(el('p','',s.phase==='input'?'Tap the runes in the order they glowed. '+s.position+'/'+s.sequence.length:s.phase==='watch'?'Listen and watch. Your turn follows the last glow.':'Round '+s.round+' · '+s.tries+' attempts left · '+s.earned+' stardust earned'));
+ info.append(el('p','',s.phase==='input'?'Tap the runes in the order they glowed. '+s.position+'/'+s.sequence.length:s.phase==='watch'?'Listen and watch. Your turn follows the last glow.':'Round '+s.round+' · '+s.tries+' attempts left · '+compact(s.earned)+' stardust earned'));
  root.append(info);
  const grid=el('div','runeGrid');
  for(let i=0;i<4;i++){
@@ -624,7 +631,7 @@ function renderRunes(root){
 function renderFishing(root){
  const s=havenGame,c=el('div','frame activityHeader');
  const title=s.phase==='bite'?'A bite! Reel now':s.phase==='waiting'?'The moonpool is listening':s.phase==='result'?(s.last?.miss?'It slipped away':HV.fishNames[s.last.fish]):'Cast into the moonlight';
- c.append(havenIcon(1),el('h3','',title),el('p','',s.phase==='waiting'?'Wait for the float to flash.':s.phase==='bite'?'Tap REEL while the float glows.':'Cast '+s.attempt+'/3 · '+s.caught+' fish · '+s.earned+' stardust this trip'));
+ c.append(havenIcon(1),el('h3','',title),el('p','',s.phase==='waiting'?'Wait for the float to flash.':s.phase==='bite'?'Tap REEL while the float glows.':'Cast '+s.attempt+'/3 · '+s.caught+' fish · '+compact(s.earned)+' stardust this trip'));
  root.append(c);
  const scene=el('div','pondScene');scene.append(el('div','waterRipple'),el('div','waterFloat'+(s.phase==='bite'?' bite':'')));
  if(s.phase==='result'&&!s.last?.miss){const catchTag=el('div','catchTag',s.last.perfect?'Perfect catch!':'Caught!');scene.append(catchTag);}
@@ -684,13 +691,13 @@ showHome();requestAnimationFrame(frame);catchUp();
 if('serviceWorker'in navigator){let controlled=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(controlled){save();location.reload();}controlled=true;});}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});}).catch(()=>notify('Offline cache unavailable. Your device save still works.'));
 
-function compact(n){if(n<1e6)return Math.floor(n).toLocaleString('en-US');return new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(n);}
+function compact(n){return GameNumbers.compact(n);}
 function expIcon(i){const n=el('span','expIcon');n.style.backgroundPosition=(i%4/3*100)+'% '+Math.floor(i/4)*100+'%';return n;}
 document.querySelectorAll('[data-exp-icon]').forEach(n=>{const i=+n.dataset.expIcon;n.style.backgroundPosition=(i%4/3*100)+'% '+Math.floor(i/4)*100+'%';});
 function updateExpeditionEntry(){
  const x=meta.expedition;
- $('expeditionInfo').textContent=x.state==='blocked'?'Stopped at wave '+x.blockedWave+' · Upgrade & retry':!x.enabled?'Offline waves paused':meta.run&&meta.run.phase!=='over'?'Wave '+meta.run.wave+' · Leaves with your current build':'Start a run to send your spirit';
- $('expeditionStatus').classList.toggle('blocked',x.state==='blocked');
+ $('expeditionInfo').textContent=x.state==='blocked'?'Stopped at wave '+x.blockedWave+' · Upgrade & retry':meta.run?.phase==='over'?'Stopped at wave '+meta.run.wave+' · Upgrade & retry':!x.enabled?'Offline waves paused':meta.run&&meta.run.phase!=='over'?'Wave '+meta.run.wave+' · Leaves with your current build':'Start a run to send your spirit';
+ $('expeditionStatus').classList.toggle('blocked',x.state==='blocked'||meta.run?.phase==='over');
 }
 $('expeditionStatus').onclick=()=>openPage('expedition');
 $('openForge').onclick=()=>{forgeTab='board';openPage('forge');};
@@ -698,23 +705,26 @@ $('openResearch').onclick=()=>openPage('research');
 $('battleForge').onclick=()=>openBattleForge('board');
 $('battleOrders').onclick=()=>openBattleForge('orders');
 $('closeForge').onclick=()=>{$('forgeDrawer').hidden=true;forgeSelected=-1;};
-$('pilotToggle').onclick=()=>{pilotOn=!pilotOn;heldPointer=null;updateHUD();notify(pilotOn?'Spirit pilot: auto attacks, powers, catches and draft choices.':'Manual evolution choices restored.');};
+$('pilotToggle').onclick=()=>setAuto(!pilotOn);
+$('autoToggle').onclick=()=>{setAuto(!pilotOn);if(pilotOn&&!meta.run)begin();};
+$('autoStatus').onclick=()=>{if(meta.run?.phase==='over'||meta.expedition.state==='blocked')openPage('expedition');else resumeRun();};
 function openBattleForge(tab){
  if(!meta.run||meta.run.phase!=='fight')return;
- forgeTab=tab;pilotOn=true;forgeSelected=-1;$('forgeDrawer').hidden=false;renderForge($('drawerContent'));updateHUD();
+ forgeTab=tab;setAuto(true,false);forgeSelected=-1;$('forgeDrawer').hidden=false;renderForge($('drawerContent'));updateHUD();
 }
 function renderExpedition(root){
  const x=meta.expedition,r=meta.run,report=x.report;
- const card=el('div','frame activityHeader');card.append(expIcon(0),el('h3','',x.state==='blocked'?'The spirit found its limit':'Your spirit keeps going'),el('p','',x.state==='blocked'?'Defeated at wave '+x.blockedWave+'. The expedition stays stopped until you retry.':x.enabled?'Offline waves are ON. Close the game whenever you want.':'Offline waves are paused. Sanctuary income and forge sparks still grow.'));root.append(card);
+ const stopped=x.state==='blocked'||r?.phase==='over';
+ const card=el('div','frame activityHeader');card.append(expIcon(0),el('h3','',stopped?'The spirit found its limit':'Your spirit keeps going'),el('p','',stopped?'Defeated at wave '+(x.blockedWave||r.wave)+'. Auto stays stopped until you retry.':x.enabled?'Offline waves are ON. Close the game whenever you want.':'Offline waves are paused. Sanctuary income and forge sparks still grow.'));root.append(card);
  root.append(el('p','notice','Uses this run’s cards, companion, damage, enemy movement, healing, shields and boss rules. The pilot attacks and casts powers; your chosen policy picks cards. Failed-wave loot is rolled back. Completed-wave rewards are kept. No offline time limit.'));
- const stats=el('div','reportGrid');for(const [value,label]of [[report.cleared,'waves cleared'],[compact(report.coins),'coins banked'],[report.shards,'crystals banked'],[report.kills,'slimes defeated']]){const n=el('div');n.append(el('b','',String(value)),el('small','',label));stats.append(n);}root.append(stats);
+ const stats=el('div','reportGrid');for(const [value,label]of [[report.cleared,'waves cleared'],[compact(report.coins),'coins banked'],[compact(report.shards),'crystals banked'],[compact(report.kills),'slimes defeated']]){const n=el('div');n.append(el('b','',String(value)),el('small','',label));stats.append(n);}root.append(stats);
  if(report.from)root.append(el('p','miniStats','Last report: waves '+report.from+'–'+report.to+(report.failed?' · stopped at '+report.failed:'')));
  const actions=el('div','miniActions');
  if(x.state==='blocked')actions.append(button('Retry wave '+x.blockedWave+' · full ward',()=>{if(X.retry(meta)){save();resumeRun();notify('Retry armed. Play now or leave the spirit to try again.');}},false,'primary'));
  else if(r&&r.phase!=='over')actions.append(button('Fight wave '+r.wave,()=>{X.takeControl(meta);resumeRun();},false,'primary'));
  else if(r?.phase==='over')actions.append(button('Retry fallen wave '+r.wave,()=>{X.retryFallen(meta,E);save();resumeRun();},false,'primary'));
  else actions.append(button('Start a run',begin,false,'primary'));
- actions.append(button('Offline waves · '+(x.enabled?'ON':'OFF'),()=>{X.takeControl(meta);x.enabled=!x.enabled;x.lastAt=Date.now();save();renderPage();}),button('Evolution policy · '+x.style,()=>{const options=['balanced','power','sustain'];x.style=options[(options.indexOf(x.style)+1)%3];save();renderPage();}),button('Upgrade with stardust',()=>openPage('research')),button('Permanent ascension upgrades',()=>openPage('workshop')));root.append(actions);
+ actions.append(button('Offline waves · '+(x.enabled?'ON':'OFF'),()=>{X.takeControl(meta);setAuto(!x.enabled,false);x.lastAt=Date.now();save();renderPage();}),button('Evolution policy · '+x.style,()=>{const options=['balanced','power','sustain'];x.style=options[(options.indexOf(x.style)+1)%3];save();renderPage();}),button('Upgrade with stardust',()=>openPage('research')),button('Permanent ascension upgrades',()=>openPage('workshop')));root.append(actions);
  root.append(el('p','notice','Balanced prioritizes damage and heals when needed. Power favors damage scaling. Sustain values healing and revivals. Reports accumulate until dismissed. Switching to manual play keeps any partial-wave loot and progress.'));
  if(report.cleared||report.failed)root.append(button('Dismiss this report',()=>{X.resetReport(meta);save();renderPage();}));
 }
@@ -724,10 +734,10 @@ function renderForge(root){
  if(forgeTab==='research')return renderResearch(root);
  const line=el('div','forgeWallet');line.append(expIcon(1),el('span','forgeBalance',compact(f.sparks)+' sparks · ✧ '+compact(meta.haven.dust)+' dust'));root.append(line);
  if(forgeTab==='orders'){
-  root.append(el('p','notice','Merge the requested rank, then deliver it. Orders grow into rarer runes as your guild reputation rises. Orders '+f.orders+' · Highest rune '+F.names[f.discovered]));
+  root.append(el('p','notice','Merge the requested rank, then deliver it. Orders grow into rarer runes as your guild reputation rises. Orders '+compact(f.orders)+' · Highest rune '+F.names[f.discovered]));
   for(let slot=0;slot<3;slot++){
    const o=F.order(meta,slot),n=el('article','orderCard frame'),row=el('div','row');row.append(runeIcon(o.rank),el('h3','',F.names[o.rank]+' · rank '+o.rank));
-   n.append(row,el('p','',compact(o.coins)+' coins · '+o.dust+' dust'+(o.shards?' · '+o.shards+' crystals':'')),button('Deliver rune',()=>{const result=F.fill(meta,slot);if(result){forgeSelected=-1;sound('buy');vibrate(20);save();renderForge(root);updateHome();notify('Order delivered · +'+result.dust+' stardust');}},!f.board.includes(o.rank),'primary'));root.append(n);
+   n.append(row,el('p','',compact(o.coins)+' coins · '+compact(o.dust)+' dust'+(o.shards?' · '+compact(o.shards)+' crystals':'')),button('Deliver rune',()=>{const result=F.fill(meta,slot);if(result){forgeSelected=-1;sound('buy');vibrate(20);save();renderForge(root);updateHome();notify('Order delivered · +'+compact(result.dust)+' stardust');}},!f.board.includes(o.rank),'primary'));root.append(n);
   }return;
  }
  root.append(el('p','forgeHelp','Tap a rune, then a matching rune to merge. Tap an empty tile to move. Ranks grow 1 → 9.'));
@@ -750,7 +760,7 @@ function renderForge(root){
  }
  root.append(controls);
  if(!inBattle){const codex=el('div','runeCodex');for(let rank=1;rank<=9;rank++){const c=el('div','codexRune'+(rank>f.discovered?' locked':''));c.append(runeIcon(rank),el('b','',rank+' · '+F.names[rank]),el('small','',rank>f.discovered?'Undiscovered':runeEffectName(rank)));codex.append(c);}root.append(codex);}
- root.append(el('p','forgeHelp',inBattle?'Pilot is fighting and choosing evolutions. Invoke runes for battle powers, or save them for guild orders.':'Sparks: +2 each cleared wave, +3 extra on bosses; regenerates every '+Math.round(45/(1+.08*f.perks.ember))+'s, even offline. No storage or time limit.'));
+ root.append(el('p','forgeHelp',inBattle?'Auto is fighting and choosing evolutions. Invoke runes for battle powers, or save them for guild orders.':'Sparks: +2 each cleared wave, +3 extra on bosses; regenerates every '+Math.round(45/(1+.08*f.perks.ember))+'s, even offline. No storage or time limit.'));
 }
 function runeIcon(rank){const n=expIcon(rank<=1?2:rank<=2?3:rank<=3?4:rank<=4?5:6);n.classList.add('runeArt','rank'+rank);return n;}
 function runeEffectName(rank){return rank===1?'refresh Frost':rank===2?'heal 3':rank===3?'firestorm':rank===4?'Soul Burst':rank===5?'royal fury':rank===6?'rift collapse':'ascendant power';}
@@ -758,8 +768,8 @@ function renderResearch(root){
  root.append(el('p','notice','✧ '+compact(meta.haven.dust)+' stardust · Research has no level cap. Costs grow with each level. Earn dust from orders, salvaged runes, boss victories and village activities. Ward upgrades apply on a new run or offline retry.'));
  for(const [id,u]of Object.entries(F.perks)){
   const panel=el('article','shopItem frame'),row=el('div','row'),copy=el('div','description'),cost=F.cost(meta,id);
-  copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+meta.forge.perks[id]),el('p','',u.desc));row.append(expIcon(u.icon),copy);
-  panel.append(row,button('Research · '+compact(cost)+' dust',()=>{F.accrue(meta);E.accrue(meta);if(F.buy(meta,id)){sound('buy');save();updateHome();if(root.id==='drawerContent'||(screen==='page'&&page==='forge'))renderForge(root);else{root.replaceChildren();renderResearch(root);}updateHUD();}},meta.haven.dust<cost,'primary'));root.append(panel);
+  copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+compact(meta.forge.perks[id])),el('p','',u.desc));row.append(expIcon(u.icon),copy);
+  panel.append(row,button('Research · '+compact(cost)+' dust',()=>{F.accrue(meta);E.accrue(meta);if(F.buy(meta,id)){sound('buy');save();updateHome();if(root.id==='drawerContent'||(screen==='page'&&page==='forge'))renderForge(root);else{root.replaceChildren();renderResearch(root);}updateHUD();}},meta.haven.dust<cost,'primary'));panel.lastElementChild.dataset.buyResearch=id;root.append(panel);
  }
 }
 function finishCatchup(){
@@ -783,4 +793,38 @@ $('catchupStop').onclick=()=>{if(catchingUp){X.takeControl(meta);finishCatchup()
 async function checkUpdate(){
  if(!('serviceWorker'in navigator)){notify('Reopen your GitHub Pages link online to update.');return;}
  try{const reg=await navigator.serviceWorker.getRegistration();if(reg){await reg.update();notify('Update checked. Close all game tabs and reopen online if a newer version was uploaded.');}else notify('Open from your GitHub Pages website to enable updates.');}catch{notify('Could not check for updates. Try again online.');}
+}
+
+function setAuto(on,announce=true){
+ pilotOn=!!on;meta.settings.auto=pilotOn;meta.expedition.enabled=pilotOn;autoPaused=false;heldPointer=null;
+ if(pilotOn&&meta.run?.phase==='draft'&&!autoPaused)autoChoose();
+ updateHUD();updateExpeditionEntry();save();
+ if(announce)notify(pilotOn?(meta.run?.phase==='over'||meta.expedition.state==='blocked'?'Auto armed · Retry wave '+meta.run.wave+' to resume.':'Auto ON · attacks, powers, upgrades and all drops. Explore freely.'):'Auto OFF · manual controls restored.');
+}
+function updateAutoControls(){
+ const r=meta.run,stopped=r?.phase==='over'||meta.expedition.state==='blocked';
+ $('autoToggle').textContent=pilotOn?'Auto ON':'Auto OFF';
+ $('autoToggle').classList.toggle('on',pilotOn);$('autoToggle').setAttribute('aria-pressed',String(!!pilotOn));
+ $('autoStatus').hidden=!pilotOn||!r;
+ if(pilotOn&&r)$('autoStatus').textContent=stopped?'Auto stopped · wave '+r.wave+' · Upgrade & retry':autoPaused?'Auto paused · Close pause menu to resume':'Auto fighting · wave '+r.wave+' · View battle →';
+ $('autoStatus').classList.toggle('blocked',!!stopped);
+ for(const b of document.querySelectorAll('[data-buy-upgrade]')){const id=b.dataset.buyUpgrade,u=E.upgrades[id];b.disabled=meta.upgrades[id]>=u.max||meta[u.currency]<E.upgradeCost(meta,id);}
+ for(const b of document.querySelectorAll('[data-buy-research]'))b.disabled=meta.haven.dust<F.cost(meta,b.dataset.buyResearch);
+ for(const b of document.querySelectorAll('[data-claim-milestone]')){const d=E.milestones.find(m=>m.id===b.dataset.claimMilestone);b.disabled=meta.claimed.includes(d.id)||!d.goal(meta);}
+}
+function autoChoose(){
+ if(!pilotOn||meta.run?.phase!=='draft'||meta.expedition.state==='blocked')return false;
+ const id=X.pick(meta,E,meta.run);
+ if(!E.choose(meta,id))return false;
+ $('draftOverlay').hidden=true;
+ if(screen==='combat'){banner('WAVE '+meta.run.wave+' · AUTO EVOLVED');if(!$('forgeDrawer').hidden)renderForge($('drawerContent'));}
+ updateHUD();save();return true;
+}
+function resolveWave(wave){
+ const r=meta.run;if(!r||r.phase!=='draft'||r.wave!==wave)return;
+ F.wave(meta,wave);heldPointer=null;
+ if(screen==='combat'&&!$('dialog').open){sound('draft');vibrate(20);}
+ if(pilotOn)autoChoose();else if(screen==='combat')showDraft();
+ if(screen==='home')updateHome();
+ save();
 }

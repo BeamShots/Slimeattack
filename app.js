@@ -1,12 +1,12 @@
 'use strict';
-const $=id=>document.getElementById(id), E=Slime, HV=Haven;
+const $=id=>document.getElementById(id), E=Slime, HV=Haven, F=Moonforge, X=Expedition;
 let havenGame=null,lastRuneCue=-1;
 const KEY='slimefall-v1:'+location.pathname.replace(/index\.html$/,'');
 let meta=E.fresh(),storageFailed=false;
 try{const saved=localStorage.getItem(KEY);if(saved)meta=E.normalize(JSON.parse(saved));}catch{storageFailed=true;}
-E.accrue(meta);
+E.accrue(meta);F.accrue(meta);X.addElapsed(meta);
 let screen='home',page='',paused=true,toastTimer,bannerTimer,dirty=false,lastTime=performance.now(),saveClock=0,hudClock=0,musicClock=0;
-let heldPointer=null;
+let heldPointer=null,forgeSelected=-1,forgeTab='board',pilotOn=false,catchingUp=false,catchupGeneration=0;
 let lastPop=0,lastCrit=0,lastPower=0;
 let specialFx=[];
 let particles=[],texts=[],lines=[],rings=[],audio=null,installPrompt=null,previewCard=null;
@@ -27,6 +27,7 @@ function positionIcon(n,index){
 }
 document.querySelectorAll('[data-icon]').forEach(n=>positionIcon(n,Number(n.dataset.icon)));
 function save(){
+ if(typeof catchingUp!=='undefined'&&!document.hidden&&!catchingUp&&meta.expedition.carry===0&&!meta.expedition.trial)meta.expedition.lastAt=Date.now();
  try{localStorage.setItem(KEY,JSON.stringify(meta));dirty=false;}catch{if(!storageFailed)notify('Device saving unavailable. Export a backup from Settings.');storageFailed=true;}
 }
 function notify(message){$('toast').textContent=message;$('toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.display='none',2700);}
@@ -73,25 +74,27 @@ $('closeDialog').onclick=()=>{sound('ui');closeDialog();};
 $('dialog').addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 function showScreen(name){
  screen=name;heldPointer=null;
+ if(name!=='combat')$('forgeDrawer').hidden=true;
  for(const id of ['home','combat','page'])$(id).classList.toggle('active',id===name);
  $('draftOverlay').hidden=!(name==='combat'&&meta.run?.phase==='draft');
 }
-function showHome(){havenGame=null;heldPointer=null;paused=true;$('dialog').close();showScreen('home');updateHome();updateHUD();save();}
+function showHome(){$('forgeDrawer').hidden=true;havenGame=null;heldPointer=null;paused=true;$('dialog').close();showScreen('home');updateHome();updateHUD();save();}
 function updateHome(){
- $('coins').textContent='● '+Math.floor(meta.coins);
- $('shards').textContent='✦ '+meta.shards;
+ $('coins').textContent='● '+compact(meta.coins);
+ $('shards').textContent='✦ '+compact(meta.shards);
  $('homeStats').textContent='BEST WAVE '+meta.best+'  ·  '+meta.kills+' SLIMES DEFEATED';
  const active=meta.run&&meta.run.phase!=='over';
  $('resume').hidden=!active;$('resume').textContent=active?'Continue · wave '+meta.run.wave:'Continue your run';
  $('play').firstChild.textContent=active?'NEW RUN ':'ENTER THE RIFT ';
- $('idleInfo').textContent=Math.floor(meta.idle.bank)+' coins ready · '+Math.round(E.idleRate(meta)*60)+'/min';
+ $('idleInfo').textContent=compact(meta.idle.bank)+' coins ready · '+Math.round(E.idleRate(meta)*60)+'/min';
  $('claimIdle').disabled=meta.idle.bank<1;
- $('havenStatus').textContent='✧ '+meta.haven.dust+' stardust · Restore Moonhaven '+meta.haven.restored.length+'/3';
+ $('havenStatus').textContent='✧ '+compact(meta.haven.dust)+' stardust · '+meta.forge.orders+' guild orders fulfilled';
+ updateExpeditionEntry();
  $('villageScene').dataset.restored=String(meta.haven.restored.length);
  $('restorationMarks').replaceChildren(...meta.haven.restored.map(id=>{const b=HV.buildings.find(b=>b.id===id),n=havenIcon(b.icon);n.classList.add('restoredMark',id+'Mark');n.setAttribute('aria-label',b.name+' restored');return n;}));
 }
 function begin(){
- meta.run=E.start(meta);paused=false;particles=[];texts=[];rings=[];lines=[];specialFx=[];
+ meta.run=E.start(meta);pilotOn=false;$('forgeDrawer').hidden=true;paused=false;particles=[];texts=[];rings=[];lines=[];specialFx=[];
  $('dialog').close();showScreen('combat');updateHUD();save();banner('WAVE 1 · THE GLADE');sound('power');if(!meta.activeGuideSeen)showActionGuide();
 }
 $('play').onclick=()=>{
@@ -102,8 +105,10 @@ $('play').onclick=()=>{
 };
 $('resume').onclick=resumeRun;
 function resumeRun(){
+ if(catchingUp)return;
  if(!meta.run||meta.run.phase==='over')return;
- $('dialog').close();showScreen('combat');paused=false;
+ if(meta.expedition.state==='blocked'){openPage('expedition');return;}
+ X.takeControl(meta);$('dialog').close();showScreen('combat');paused=false;
  if(meta.run.phase==='draft')showDraft();
  updateHUD();if(!meta.activeGuideSeen)showActionGuide();
 }
@@ -113,10 +118,13 @@ $('claimIdle').onclick=()=>{
 document.querySelectorAll('[data-page]').forEach(n=>n.onclick=()=>{sound('ui');openPage(n.dataset.page);});
 $('back').onclick=showHome;
 function openPage(name){
- havenGame=null;lastRuneCue=-1;page=name;paused=true;showScreen('page');$('pageTitle').textContent={workshop:'Ascension',collection:'Grimoire',milestones:'Milestones',bestiary:'Field guide',village:'Moonhaven',runes:'Runeforge',fishing:'Moonpool',stars:'Stargazer'}[name];renderPage();
+ havenGame=null;lastRuneCue=-1;page=name;paused=true;showScreen('page');$('pageTitle').textContent={workshop:'Ascension',collection:'Grimoire',milestones:'Milestones',bestiary:'Field guide',village:'Moonhaven',runes:'Runeforge',fishing:'Moonpool',stars:'Stargazer',expedition:'Eternal expedition',forge:'Moonforge',research:'Stardust research'}[name];renderPage();
 }
 function renderPage(){
  const root=$('pageContent');root.replaceChildren();
+ if(page==='expedition')return renderExpedition(root);
+ if(page==='forge')return renderForge(root);
+ if(page==='research')return renderResearch(root);
  if(['village','runes','fishing','stars'].includes(page))return renderHavenPage();
  if(page==='workshop'){
   root.append(el('p','notice','Permanent upgrades survive every run. Ward hearts apply when starting a new run. Other upgrades improve your current build too.'));
@@ -124,7 +132,7 @@ function renderPage(){
    const panel=el('article','shopItem frame'),row=el('div','row'),copy=el('div','description'),level=meta.upgrades[id],cost=E.upgradeCost(meta,id);
    copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+level+' / '+u.max),el('p','',u.desc));
    const purchase=button(level>=u.max?'MAX LEVEL':cost+' '+(u.currency==='coins'?'coins':'crystals'),()=>{
-    if(E.buy(meta,id)){sound('buy');vibrate(12);save();updateHome();renderPage();}
+    E.accrue(meta);if(E.buy(meta,id)){sound('buy');vibrate(12);save();updateHome();renderPage();}
    },level>=u.max||meta[u.currency]<cost,'primary');
    row.append(icon(u.icon),copy);panel.append(row,purchase);root.append(panel);
   }
@@ -160,8 +168,10 @@ function enemyPortrait(type){
  n.style.backgroundPosition=(index%cols/(cols-1)*100)+'% '+(Math.floor(index/cols)/(rows-1)*100)+'%';return n;
 }
 function updateHUD(){
- $('coins').textContent='● '+Math.floor(meta.coins);$('shards').textContent='✦ '+meta.shards;
+ $('coins').textContent='● '+compact(meta.coins);$('shards').textContent='✦ '+compact(meta.shards);
  const r=meta.run;if(!r)return;
+ $('pilotToggle').textContent='Pilot · '+(pilotOn?'ON':'OFF');
+ $('pilotToggle').classList.toggle('on',pilotOn);
  $('waveLabel').textContent='Wave '+r.wave+(r.wave%5===0?' · BOSS':'');
  const area=E.realm(r.wave);$('arena').dataset.realm=String(area);
  $('realmLabel').textContent=E.realms[area]+' · '+E.conditions[r.modifier||'calm'].name+' ⓘ'+(r.wave>40?' · Ascension '+(r.wave-40):'');
@@ -221,8 +231,9 @@ for(const id of ['frost','fury','burst'])$(id).onclick=()=>{if(paused)return;pro
 function summary(){
  paused=true;const r=meta.run,body=el('div','summary');
  body.append(el('div','eyebrow',r.wave>meta.best?'A NEW FRONTIER':'THE WARD HAS FALLEN'),el('div','big','Wave '+r.wave),el('p','',r.kills+' kills · '+r.earned+' coins kept · '+r.bestCombo+' best combo'));
+ $('forgeDrawer').hidden=true;
  body.append(el('p','notice',r.actions.swipes+' slashes · '+r.actions.weak+' core breaks · '+r.actions.parries+' counters · '+r.actions.bursts+' Soul Bursts'));
- const menu=el('div','menuButtons');menu.append(button('Try another build',begin,false,'primary'),button('Ascend & upgrade',()=>{$('dialog').close();openPage('workshop');}),button('Return home',showHome));body.append(menu);dialog('The power stays with you',body);save();
+ const menu=el('div','menuButtons');menu.append(button('Retry wave '+r.wave,()=>{X.retryFallen(meta,E);save();resumeRun();},false,'primary'),button('Try another build',begin),button('Ascend & upgrade',()=>{$('dialog').close();openPage('workshop');}),button('Return home',showHome));body.append(menu);dialog('The power stays with you',body);save();
 }
 function processEvents(events){
  for(const e of events){
@@ -277,7 +288,7 @@ function processEvents(events){
   }
   if(e.type==='combo'){sound('coin');banner(e.amount+'× COMBO · +3 COINS');}
   if(e.type==='boss'){sound('power');banner(E.enemyNames[e.enemyType??meta.run.enemies.find(e=>e.boss)?.type??7].toUpperCase());}
-  if(e.type==='wave'){heldPointer=null;sound('draft');vibrate(20);save();showDraft();}
+  if(e.type==='wave'){F.wave(meta,e.wave);heldPointer=null;sound('draft');vibrate(20);if(pilotOn){E.choose(meta,X.pick(meta,E,meta.run));$('draftOverlay').hidden=true;banner('WAVE '+meta.run.wave+' · AUTO EVOLVED');if(!$('forgeDrawer').hidden)renderForge($('drawerContent'));}else showDraft();save();}
   if(e.type==='over'){sound('over');summary();}
  }
  const mode=meta.settings.effects;
@@ -486,6 +497,7 @@ function settings(){
   }));dialog('Reset this save?',confirm);
  }));
  if(storageFailed)menu.prepend(el('p','notice','Device saving is unavailable or a previous save could not be read. Export a backup to keep this session.'));
+ menu.prepend(el('p','notice','Eternal Expedition · v5.0.0 · Unlimited sanctuary income · Smart offline waves'),button('Check for game update',checkUpdate));
  dialog('Settings',menu);
 }
 $('settings').onclick=()=>{sound('ui');settings();};
@@ -494,7 +506,7 @@ function help(){
  el('p','','Swipe through groups, tap cyan cores or amber counter rings, and catch bonus drops. Tap or hold on slimes before they cross the bottom ward. Your companion automatically targets the lowest enemies, even when you are not tapping.'),
  el('p','','Every cleared wave offers three upgrade cards. Choose one. Powers stack for the current run. Rare combinations can clear entire groups with one tap.'),
  el('p','','Frost nova slows the whole swarm. Overcharge doubles your damage for six seconds. Both recharge automatically. Active attacks and catches fill Soul Burst. Press it when charged. Complete the short bounty shown above your powers for coins and a crystal. Bosses arrive every fifth wave. Gold slimes carry bonus coins.'),
- el('p','','You keep all earned coins and crystals when defeated. Buy permanent upgrades on the home screen. Collect idle coins from the sanctuary. Saved runs can be continued later. Combat pauses while you are away.'),
+ el('p','','You keep all earned coins and crystals when defeated. Buy permanent upgrades on the home screen. Collect idle coins from the sanctuary. Saved runs can be continued later. Offline waves use your current build and stop at the first defeat. Sanctuary coins and forge sparks have no time limit. Open the expedition for a report or to retry.'),
  button('Got it',closeDialog,false,'primary'));
  dialog('Become the storm',body);
 }
@@ -507,30 +519,29 @@ $('import').onchange=async event=>{
   if(file.size>3e6)throw Error('Too large');
   const imported=E.normalize(JSON.parse(await file.text()));
   const menu=el('div','menuButtons');menu.append(el('p','','Replace Slimefall with this imported save? Tideforge saves are separate.'),button('Export current backup',exportSave),button('Use imported save',()=>{
-   meta=imported;E.accrue(meta);save();showHome();notify('Your Slimefall save is restored.');
+   meta=imported;E.accrue(meta);F.accrue(meta);X.addElapsed(meta);save();showHome();catchUp();notify('Your Slimefall save is restored.');
   },false,'primary'));dialog('Restore a save',menu);
  }catch{notify('That file is not a valid Slimefall save.');}
  finally{event.target.value='';}
 };
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;});
+function depart(){
+ if(catchingUp){catchingUp=false;catchupGeneration++;}
+ E.accrue(meta);F.accrue(meta);meta.expedition.lastAt=Date.now();save();paused=true;
+ if(audio?.state==='running')audio.suspend();
+}
 document.addEventListener('visibilitychange',()=>{
- if(document.hidden){
-  E.accrue(meta);save();paused=true;
-  if(audio?.state==='running')audio.suspend();
- }else{
-  E.accrue(meta);lastTime=performance.now();updateHome();save();
-  if(screen==='combat'&&meta.run?.phase==='fight'){
-   const menu=el('div','menuButtons');menu.append(el('p','','Combat paused while you were away. Your sanctuary kept growing.'),button('Resume battle',closeDialog,false,'primary'),button('Save & home',showHome));dialog('Welcome back',menu);
-  }
- }
+ if(document.hidden)depart();
+ else{E.accrue(meta);F.accrue(meta);X.addElapsed(meta);lastTime=performance.now();catchUp();}
 });
-window.addEventListener('pagehide',()=>{E.accrue(meta);save();});
+window.addEventListener('pagehide',()=>{if(!document.hidden)depart();});
 function frame(now){
  const dt=Math.max(0,Math.min(.05,(now-lastTime)/1000));lastTime=now;
- if(!document.hidden){
+ if(!document.hidden&&!catchingUp){
   hudClock+=dt;saveClock+=dt;musicClock+=dt;
   if(screen==='combat'&&!paused&&!$('dialog').open&&meta.run?.phase==='fight'){
-   processEvents(E.step(meta,dt));
+   if(pilotOn)processEvents(X.pilot(meta,E,dt));
+   if(meta.run.phase==='fight')processEvents(E.step(meta,dt));
    if(heldPointer&&!heldPointer.swiping&&meta.run.phase==='fight'){
     heldPointer.clock-=dt;
     if(heldPointer.clock<=0){heldPointer.clock=.16;strikeAt(heldPointer.x,heldPointer.y,false);}
@@ -540,7 +551,7 @@ function frame(now){
   if(screen==='combat')draw(paused?0:dt);
   if(screen==='page'&&!$('dialog').open)advanceHaven(dt);
   if(hudClock>=.15){hudClock=0;updateHUD();}
-  if(saveClock>=2){saveClock=0;E.accrue(meta);if(screen==='home')updateHome();if(dirty||screen==='home')save();}
+  if(saveClock>=2){saveClock=0;E.accrue(meta);const beforeSparks=meta.forge.sparks;F.accrue(meta);if(beforeSparks!==meta.forge.sparks){if(!$('forgeDrawer').hidden)renderForge($('drawerContent'));else if(screen==='page'&&page==='forge')renderForge($('pageContent'));}meta.expedition.lastAt=Date.now();if(screen==='home')updateHome();if(screen==='page'&&page==='expedition')renderPage();for(const n of document.querySelectorAll('.forgeBalance'))n.textContent=compact(meta.forge.sparks)+' sparks · ✧ '+compact(meta.haven.dust)+' dust';save();}
   if(musicClock>=8){musicClock=0;ambient();}
  }
  requestAnimationFrame(frame);
@@ -669,5 +680,107 @@ function advanceHaven(dt){
   if(bite)sound('coin');if(phase!==havenGame.phase)renderHavenPage();
  }
 }
-showHome();requestAnimationFrame(frame);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>notify('Offline cache unavailable. Your device save still works.'));
+showHome();requestAnimationFrame(frame);catchUp();
+if('serviceWorker'in navigator){let controlled=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(controlled){save();location.reload();}controlled=true;});}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});}).catch(()=>notify('Offline cache unavailable. Your device save still works.'));
+
+function compact(n){if(n<1e6)return Math.floor(n).toLocaleString('en-US');return new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(n);}
+function expIcon(i){const n=el('span','expIcon');n.style.backgroundPosition=(i%4/3*100)+'% '+Math.floor(i/4)*100+'%';return n;}
+document.querySelectorAll('[data-exp-icon]').forEach(n=>{const i=+n.dataset.expIcon;n.style.backgroundPosition=(i%4/3*100)+'% '+Math.floor(i/4)*100+'%';});
+function updateExpeditionEntry(){
+ const x=meta.expedition;
+ $('expeditionInfo').textContent=x.state==='blocked'?'Stopped at wave '+x.blockedWave+' · Upgrade & retry':!x.enabled?'Offline waves paused':meta.run&&meta.run.phase!=='over'?'Wave '+meta.run.wave+' · Leaves with your current build':'Start a run to send your spirit';
+ $('expeditionStatus').classList.toggle('blocked',x.state==='blocked');
+}
+$('expeditionStatus').onclick=()=>openPage('expedition');
+$('openForge').onclick=()=>{forgeTab='board';openPage('forge');};
+$('openResearch').onclick=()=>openPage('research');
+$('battleForge').onclick=()=>openBattleForge('board');
+$('battleOrders').onclick=()=>openBattleForge('orders');
+$('closeForge').onclick=()=>{$('forgeDrawer').hidden=true;forgeSelected=-1;};
+$('pilotToggle').onclick=()=>{pilotOn=!pilotOn;heldPointer=null;updateHUD();notify(pilotOn?'Spirit pilot: auto attacks, powers, catches and draft choices.':'Manual evolution choices restored.');};
+function openBattleForge(tab){
+ if(!meta.run||meta.run.phase!=='fight')return;
+ forgeTab=tab;pilotOn=true;forgeSelected=-1;$('forgeDrawer').hidden=false;renderForge($('drawerContent'));updateHUD();
+}
+function renderExpedition(root){
+ const x=meta.expedition,r=meta.run,report=x.report;
+ const card=el('div','frame activityHeader');card.append(expIcon(0),el('h3','',x.state==='blocked'?'The spirit found its limit':'Your spirit keeps going'),el('p','',x.state==='blocked'?'Defeated at wave '+x.blockedWave+'. The expedition stays stopped until you retry.':x.enabled?'Offline waves are ON. Close the game whenever you want.':'Offline waves are paused. Sanctuary income and forge sparks still grow.'));root.append(card);
+ root.append(el('p','notice','Uses this run’s cards, companion, damage, enemy movement, healing, shields and boss rules. The pilot attacks and casts powers; your chosen policy picks cards. Failed-wave loot is rolled back. Completed-wave rewards are kept. No offline time limit.'));
+ const stats=el('div','reportGrid');for(const [value,label]of [[report.cleared,'waves cleared'],[compact(report.coins),'coins banked'],[report.shards,'crystals banked'],[report.kills,'slimes defeated']]){const n=el('div');n.append(el('b','',String(value)),el('small','',label));stats.append(n);}root.append(stats);
+ if(report.from)root.append(el('p','miniStats','Last report: waves '+report.from+'–'+report.to+(report.failed?' · stopped at '+report.failed:'')));
+ const actions=el('div','miniActions');
+ if(x.state==='blocked')actions.append(button('Retry wave '+x.blockedWave+' · full ward',()=>{if(X.retry(meta)){save();resumeRun();notify('Retry armed. Play now or leave the spirit to try again.');}},false,'primary'));
+ else if(r&&r.phase!=='over')actions.append(button('Fight wave '+r.wave,()=>{X.takeControl(meta);resumeRun();},false,'primary'));
+ else if(r?.phase==='over')actions.append(button('Retry fallen wave '+r.wave,()=>{X.retryFallen(meta,E);save();resumeRun();},false,'primary'));
+ else actions.append(button('Start a run',begin,false,'primary'));
+ actions.append(button('Offline waves · '+(x.enabled?'ON':'OFF'),()=>{X.takeControl(meta);x.enabled=!x.enabled;x.lastAt=Date.now();save();renderPage();}),button('Evolution policy · '+x.style,()=>{const options=['balanced','power','sustain'];x.style=options[(options.indexOf(x.style)+1)%3];save();renderPage();}),button('Upgrade with stardust',()=>openPage('research')),button('Permanent ascension upgrades',()=>openPage('workshop')));root.append(actions);
+ root.append(el('p','notice','Balanced prioritizes damage and heals when needed. Power favors damage scaling. Sustain values healing and revivals. Reports accumulate until dismissed. Switching to manual play keeps any partial-wave loot and progress.'));
+ if(report.cleared||report.failed)root.append(button('Dismiss this report',()=>{X.resetReport(meta);save();renderPage();}));
+}
+function renderForge(root){
+ root.replaceChildren();const f=meta.forge,inBattle=screen==='combat';
+ const tabs=el('div','forgeTabs');for(const [id,label]of [['board','Merge runes'],['orders','Guild orders'],['research','Research']])tabs.append(button(label,()=>{forgeTab=id;forgeSelected=-1;renderForge(root);},false,forgeTab===id?'selected':''));root.append(tabs);
+ if(forgeTab==='research')return renderResearch(root);
+ const line=el('div','forgeWallet');line.append(expIcon(1),el('span','forgeBalance',compact(f.sparks)+' sparks · ✧ '+compact(meta.haven.dust)+' dust'));root.append(line);
+ if(forgeTab==='orders'){
+  root.append(el('p','notice','Merge the requested rank, then deliver it. Orders grow into rarer runes as your guild reputation rises. Orders '+f.orders+' · Highest rune '+F.names[f.discovered]));
+  for(let slot=0;slot<3;slot++){
+   const o=F.order(meta,slot),n=el('article','orderCard frame'),row=el('div','row');row.append(runeIcon(o.rank),el('h3','',F.names[o.rank]+' · rank '+o.rank));
+   n.append(row,el('p','',compact(o.coins)+' coins · '+o.dust+' dust'+(o.shards?' · '+o.shards+' crystals':'')),button('Deliver rune',()=>{const result=F.fill(meta,slot);if(result){forgeSelected=-1;sound('buy');vibrate(20);save();renderForge(root);updateHome();notify('Order delivered · +'+result.dust+' stardust');}},!f.board.includes(o.rank),'primary'));root.append(n);
+  }return;
+ }
+ root.append(el('p','forgeHelp','Tap a rune, then a matching rune to merge. Tap an empty tile to move. Ranks grow 1 → 9.'));
+ const board=el('div','mergeBoard');f.board.forEach((rank,i)=>{
+  const n=button('',()=>{
+   if(forgeSelected===i){forgeSelected=-1;renderForge(root);return;}
+   if(forgeSelected>=0&&(F.merge(meta,forgeSelected,i)||F.move(meta,forgeSelected,i))){sound('buy');vibrate(8);forgeSelected=-1;save();renderForge(root);return;}
+   forgeSelected=rank?i:-1;sound('rune'+(rank%4));renderForge(root);
+  },false,'mergeTile'+(forgeSelected===i?' selected':''));
+  n.setAttribute('aria-label',rank?F.names[rank]+' rune rank '+rank+', tile '+(i+1):'Empty tile '+(i+1));
+  if(rank)n.append(runeIcon(rank),el('small','rankTag',String(rank)));else n.append(el('span','emptyRune','✧'));board.append(n);
+ });root.append(board);
+ const controls=el('div','forgeControls');controls.append(button('Conjure · 1 spark',()=>{if(F.summon(meta)>=0){sound('pickup');forgeSelected=-1;save();renderForge(root);}},f.sparks<1||!f.board.includes(0),'primary'));
+ const empty=f.board.filter(n=>n===0).length,count=Math.min(empty,f.sparks);
+ if(count>1)controls.append(button('Fill board · '+count+' sparks',()=>{for(let i=0;i<count;i++)F.summon(meta);forgeSelected=-1;sound('pickup');save();renderForge(root);},false));
+ const rank=f.board[forgeSelected]||0;
+ if(rank){
+  controls.append(button('Salvage → '+Math.pow(2,rank-1)+' dust',()=>{if(F.salvage(meta,forgeSelected)){forgeSelected=-1;sound('coin');save();renderForge(root);updateHome();}},false));
+  if(inBattle)controls.append(button('Invoke · '+runeEffectName(rank),()=>{const events=E.invokeRune(meta,forgeSelected);if(events.length){forgeSelected=-1;processEvents(events);sound('burst');save();renderForge(root);updateHUD();}},!meta.run||meta.run.phase!=='fight'));
+ }
+ root.append(controls);
+ if(!inBattle){const codex=el('div','runeCodex');for(let rank=1;rank<=9;rank++){const c=el('div','codexRune'+(rank>f.discovered?' locked':''));c.append(runeIcon(rank),el('b','',rank+' · '+F.names[rank]),el('small','',rank>f.discovered?'Undiscovered':runeEffectName(rank)));codex.append(c);}root.append(codex);}
+ root.append(el('p','forgeHelp',inBattle?'Pilot is fighting and choosing evolutions. Invoke runes for battle powers, or save them for guild orders.':'Sparks: +2 each cleared wave, +3 extra on bosses; regenerates every '+Math.round(45/(1+.08*f.perks.ember))+'s, even offline. No storage or time limit.'));
+}
+function runeIcon(rank){const n=expIcon(rank<=1?2:rank<=2?3:rank<=3?4:rank<=4?5:6);n.classList.add('runeArt','rank'+rank);return n;}
+function runeEffectName(rank){return rank===1?'refresh Frost':rank===2?'heal 3':rank===3?'firestorm':rank===4?'Soul Burst':rank===5?'royal fury':rank===6?'rift collapse':'ascendant power';}
+function renderResearch(root){
+ root.append(el('p','notice','✧ '+compact(meta.haven.dust)+' stardust · Research has no level cap. Costs grow with each level. Earn dust from orders, salvaged runes, boss victories and village activities. Ward upgrades apply on a new run or offline retry.'));
+ for(const [id,u]of Object.entries(F.perks)){
+  const panel=el('article','shopItem frame'),row=el('div','row'),copy=el('div','description'),cost=F.cost(meta,id);
+  copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+meta.forge.perks[id]),el('p','',u.desc));row.append(expIcon(u.icon),copy);
+  panel.append(row,button('Research · '+compact(cost)+' dust',()=>{F.accrue(meta);E.accrue(meta);if(F.buy(meta,id)){sound('buy');save();updateHome();if(root.id==='drawerContent'||(screen==='page'&&page==='forge'))renderForge(root);else{root.replaceChildren();renderResearch(root);}updateHUD();}},meta.haven.dust<cost,'primary'));root.append(panel);
+ }
+}
+function finishCatchup(){
+ catchingUp=false;catchupGeneration++;$('catchup').hidden=true;X.takeControl(meta);showHome();save();
+ if(meta.expedition.report.failed)notify('Expedition stopped at wave '+meta.expedition.report.failed+'. Open the expedition to upgrade and retry.');
+ else if(meta.expedition.report.cleared)notify('Expedition cleared '+meta.expedition.report.cleared+' waves. Rewards banked.');
+}
+function catchUp(){
+ if(catchingUp)return;if(meta.expedition.carry<.1&&!meta.expedition.trial){showHome();return;}catchingUp=true;paused=true;$('dialog').close();$('draftOverlay').hidden=true;$('forgeDrawer').hidden=true;
+ $('catchup').hidden=false;
+ const generation=++catchupGeneration;
+ function work(){
+  if(!catchingUp||document.hidden||generation!==catchupGeneration)return;
+  const more=X.settle(meta,E,F,1200);save();
+  $('catchupInfo').textContent='Wave '+(meta.expedition.trial?.run.wave||meta.run?.wave||1)+' · '+meta.expedition.report.cleared+' cleared · '+compact(meta.expedition.report.coins)+' coins';
+  if(more)setTimeout(work,0);else finishCatchup();
+ }
+ setTimeout(work,0);
+}
+$('catchupStop').onclick=()=>{if(catchingUp){X.takeControl(meta);finishCatchup();notify('Returned to your current wave. Sanctuary earnings are kept.');}};
+async function checkUpdate(){
+ if(!('serviceWorker'in navigator)){notify('Reopen your GitHub Pages link online to update.');return;}
+ try{const reg=await navigator.serviceWorker.getRegistration();if(reg){await reg.update();notify('Update checked. Close all game tabs and reopen online if a newer version was uploaded.');}else notify('Open from your GitHub Pages website to enable updates.');}catch{notify('Could not check for updates. Try again online.');}
+}

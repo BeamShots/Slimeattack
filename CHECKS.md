@@ -1,18 +1,30 @@
-# Moonhaven verification
-163 automated checks passed:
-- 36 base engine checks.
-- 24 Riftbound checks.
-- 29 Soul Rush active-combat checks.
-- 44 simulated-DOM interaction checks. These cover previous controls and the new village locations, memory playback/input/replay, fishing casts/bites/reels/limits, puzzle rotation/hints/completion, restoration, extra rerolls, live-battle pause/resume across activities, timer suspension under dialogs, effect cycling, damage-number toggling and reduced visual budgets.
-- 20 Moonhaven model checks cover migration, data validation, side-game state transitions, reward duplication prevention, limits, discoveries, puzzle solvability, hints, rotations, restoration costs, idle growth, rerolls, serialization, visual-setting independence and idle-claim duplication. One of these checks generated and solved 500 different seeded spatial puzzles.
-- Three legacy-input early combat simulations.
-- Three developed-build late combat simulations.
-- Three active-input progression simulations.
-- One audio-graph check for original/action effects, ambient notes, noise layers, cleanup and mute.
+# Eternal Expedition v5.0.0 verification
 
-Additional checks verify all local references and cached files, service-worker install/activate/cache logic, non-GET bypass, JavaScript syntax, flat packaging and ZIP integrity.
-The original combat checks were rerun against the new build. Town rewards and visual settings are independent of combat simulation.
-The village, moonstone frame and location/rune atlas are generated images used by the actual game.
+211 automated checks passed in this build:
 
-Limitations:
-UI interaction tests run in a simulated DOM. Full browser layout, physical-phone controls, device sound/vibration, Android installation, real offline reload and phone frame rate have not been verified on a physical device.
+| Area | Checks |
+| --- | ---: |
+| Core engine | 36 |
+| Realm, enemy and power expansion | 24 |
+| Slashes, counters, drops and Soul Burst | 29 |
+| Village games and restoration | 20 |
+| Moonforge, orders, research and invocations | 14 |
+| Offline waves, migration, accounting and retries | 18 |
+| Early, late and active-input progression simulations | 9 |
+| Simulated UI interactions | 59 |
+| Service-worker offline cache | 1 |
+| Sound synthesis and mute | 1 |
+
+The village checks include 500 generated solvable star puzzles. The forge checks include 10,000 randomized actions. Progression simulations use multiple seeded runs and save/load checks. Canvas rendering used the actual shipped slime/effect artwork.
+
+Offline tests cover an old wave-155 save, ten years of uncapped passive income, clock rollback, first-defeat stopping, failed-wave reward rollback, blocked visits, upgrades changing retry outcomes, different processing batch sizes producing identical results, serialization in the middle of a simulated wave, manual takeover without duplicate rewards, disabled offline waves, automatic drafts and corrupt trial recovery.
+
+UI checks exercise the new home entries, live crafting without pausing combat, conjuring, merges, healing invocation, fill-board, guild delivery, research, automatic draft choices, manual control, blocked-wave retry, saved manual defeat at wave 155, policy controls, report dismissal, asynchronous return overlay, interrupted catch-up and returning with offline mode disabled. Existing activity, settings, import/export, battle and navigation tests still pass.
+
+The service-worker harness installs all 25 runtime URLs and serves every one with network access disabled. Every shipped JavaScript file passes Node syntax checking. Local asset references and ZIP root layout were checked.
+
+## Limits of this verification
+
+UI automation used happy-dom with a native canvas implementation; it does not measure real CSS layout or reproduce a mobile browser. Chromium was present but its launch failed because the environment denied socket access. No real Android/iOS device, touch ergonomics, PWA installation, browser audio activation, real service-worker upgrade lifecycle or phone performance was verified. The cache test is a service-worker emulation, not an actual installed browser session.
+
+Recommended phone smoke test after upload: verify the v5 header, continue your saved run, open the forge while the pilot fights, merge and deliver a rune, leave and return for an expedition report, upgrade/retry a blocked wave, then reopen in airplane mode. Keep an exported save backup.

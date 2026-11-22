@@ -9,7 +9,7 @@ const buildings=[
 function town(){return {dust:0,restored:[],best:{runes:0,fish:0,stars:0},fishBook:[]};}
 function normalize(raw){
  const s=town();if(!raw||typeof raw!=='object')return s;
- s.dust=Number.isFinite(raw.dust)?Math.max(0,Math.min(1e7,Math.floor(raw.dust))):0;
+ s.dust=Number.isFinite(raw.dust)?Math.max(0,Math.floor(raw.dust)):0;
  s.restored=Array.isArray(raw.restored)?[...new Set(raw.restored.filter(id=>buildings.some(b=>b.id===id)))]:[];
  for(const k in s.best)s.best[k]=Number.isFinite(raw.best?.[k])?Math.max(0,Math.min(1e7,Math.floor(raw.best[k]))):0;
  s.fishBook=Array.isArray(raw.fishBook)?[...new Set(raw.fishBook.filter(n=>Number.isInteger(n)&&n>=0&&n<5))]:[];return s;

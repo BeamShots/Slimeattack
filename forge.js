@@ -1,6 +1,7 @@
 /* Moonforge: a persistent merge puzzle, escalating orders and open-ended research. */
 (function(root){
 'use strict';
+const T=typeof module!=='undefined'?require('./tree.js'):root.SkillTree;
 const perks={
  edge:{name:'Astral edge',icon:3,desc:'+8% damage per level, in battle and offline.',base:14},
  flow:{name:'Sanctuary current',icon:5,desc:'+20% sanctuary income per level.',base:12},
@@ -23,7 +24,7 @@ function normalize(raw,now=Date.now()){
 }
 function accrue(m,now=Date.now()){
  const f=m.forge,elapsed=Math.max(0,(now-f.lastAt)/1000);if(now<f.lastAt)return 0;
- const amount=f.charge+elapsed*(1+.08*f.perks.ember)/45,n=Math.floor(amount);
+ const amount=f.charge+elapsed*(1+.08*f.perks.ember)*(1+.05*T.stats(m).craft)/45,n=Math.floor(amount);
  f.sparks+=n;f.charge=amount-n;f.lastAt=now;return n;
 }
 function summon(m){const f=m.forge,i=f.board.indexOf(0);if(i<0||f.sparks<1)return -1;f.sparks--;f.board[i]=1;return i;}
@@ -35,7 +36,7 @@ function merge(m,a,b){
 function move(m,a,b){if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a>=12||b>=12||!m.forge.board[a]||m.forge.board[b])return false;m.forge.board[b]=m.forge.board[a];m.forge.board[a]=0;return true;}
 function order(m,slot){
  const f=m.forge,index=f.orderIds[slot],ceiling=Math.min(9,3+Math.floor(index/12));
- const rank=2+(index*7)%(ceiling-1),mult=1+.15*f.perks.bounty;
+ const rank=2+(index*7)%(ceiling-1),mult=(1+.15*f.perks.bounty)*(1+.05*T.stats(m).craft);
  return {rank,coins:Math.round((35+m.best*2)*Math.pow(2,rank-2)*mult),dust:Math.round(Math.pow(2,rank-1)*mult),shards:rank>=5?Math.floor(rank/2):0};
 }
 function fill(m,slot){
@@ -48,7 +49,7 @@ function salvage(m,i){const f=m.forge;if(!Number.isInteger(i)||i<0||i>=12||!f.bo
 function cost(m,id){return perks[id]?Math.ceil(perks[id].base*Math.pow(m.forge.perks[id]+1,1.65)):Infinity;}
 function buy(m,id){if(!perks[id])return false;const n=cost(m,id);if(m.haven.dust<n)return false;m.haven.dust-=n;m.forge.perks[id]++;return true;}
 function damage(m){return (1+.08*m.forge.perks.edge)*(1+.05*m.forge.perks.echo);}
-function wave(m,w){m.forge.sparks+=2+(w%5===0?3:0);m.haven.dust+=w%5===0?2+Math.floor(w/40):0;}
+function wave(m,w){m.forge.sparks+=2+(w%5===0?3+T.stats(m).caps[4]:0);m.haven.dust+=w%5===0?2+Math.floor(w/40):0;}
 const api={fresh,normalize,accrue,summon,merge,move,order,fill,salvage,cost,buy,damage,wave,perks,names};
 if(typeof module!=='undefined')module.exports=api;root.Moonforge=api;
 })(globalThis);

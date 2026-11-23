@@ -1,5 +1,5 @@
 'use strict';
-const $=id=>document.getElementById(id), E=Slime, HV=Haven, F=Moonforge, X=Expedition;
+const $=id=>document.getElementById(id), E=Slime, HV=Haven, F=Moonforge, X=Expedition, T=SkillTree;
 let havenGame=null,lastRuneCue=-1;
 const KEY='slimefall-v1:'+location.pathname.replace(/index\.html$/,'');
 let meta=E.fresh(),storageFailed=false;
@@ -74,6 +74,7 @@ function closeDialog(){
 $('closeDialog').onclick=()=>{sound('ui');closeDialog();};
 $('dialog').addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 function showScreen(name){
+ $('mainNav').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.main===(name==='page'?(page==='tree'?'tree':page==='village'||['runes','fishing','stars'].includes(page)?'village':'shop'):name)));
  screen=name;heldPointer=null;
  if(name!=='combat')$('forgeDrawer').hidden=true;
  for(const id of ['home','combat','page'])$(id).classList.toggle('active',id===name);
@@ -83,10 +84,11 @@ function showHome(){autoPaused=false;$('forgeDrawer').hidden=true;havenGame=null
 function updateHome(){
  $('coins').textContent='● '+compact(meta.coins);
  $('shards').textContent='✦ '+compact(meta.shards);
- $('homeStats').textContent='BEST WAVE '+meta.best+'  ·  '+compact(meta.kills)+' SLIMES DEFEATED';
+ $('homeStats').textContent='Wave '+(meta.run?.wave||1)+' · Best '+meta.best;
  const active=meta.run&&meta.run.phase!=='over';
- $('resume').hidden=!active;$('resume').textContent=active?'Continue · wave '+meta.run.wave:'Continue your run';
- $('play').firstChild.textContent=active?'NEW RUN ':'ENTER THE RIFT ';
+ $('resume').hidden=!active;$('resume').textContent=active?'PLAY · WAVE '+meta.run.wave:'Continue your run';
+ $('play').firstChild.textContent=active?'Start a new adventure ':'PLAY ';
+ $('homeTreeInfo').textContent=compact(T.available(meta))+' skill points · '+Object.keys(meta.tree.nodes).length+' paths unlocked';renderHomeGoal();
  $('idleInfo').textContent=compact(meta.idle.bank)+' coins ready · '+compact(E.idleRate(meta)*60)+'/min';
  $('claimIdle').disabled=meta.idle.bank<1;
  $('havenStatus').textContent='✧ '+compact(meta.haven.dust)+' stardust · '+compact(meta.forge.orders)+' guild orders fulfilled';
@@ -119,10 +121,12 @@ $('claimIdle').onclick=()=>{
 document.querySelectorAll('[data-page]').forEach(n=>n.onclick=()=>{sound('ui');openPage(n.dataset.page);});
 $('back').onclick=showHome;
 function openPage(name){
- havenGame=null;lastRuneCue=-1;page=name;paused=true;showScreen('page');$('pageTitle').textContent={workshop:'Ascension',collection:'Grimoire',milestones:'Milestones',bestiary:'Field guide',village:'Moonhaven',runes:'Runeforge',fishing:'Moonpool',stars:'Stargazer',expedition:'Eternal expedition',forge:'Moonforge',research:'Stardust research'}[name];renderPage();
+ havenGame=null;lastRuneCue=-1;page=name;paused=true;showScreen('page');$('pageTitle').textContent={workshop:'Battle upgrades',collection:'Powers',milestones:'Rewards',bestiary:'Slime guide',village:'Mini-games',runes:'Memory game',fishing:'Fishing',stars:'Star puzzle',expedition:'Eternal expedition',forge:'Moonforge',research:'Research',tree:'Skill tree',shop:'Upgrades'}[name];renderPage();
 }
 function renderPage(){
- const root=$('pageContent');root.replaceChildren();
+ const root=$('pageContent');root.classList.toggle('treePage',page==='tree');root.replaceChildren();
+ if(page==='tree')return renderTree(root);
+ if(page==='shop')return renderShop(root);
  if(page==='expedition')return renderExpedition(root);
  if(page==='forge')return renderForge(root);
  if(page==='research')return renderResearch(root);
@@ -131,7 +135,7 @@ function renderPage(){
   root.append(el('p','notice','Permanent upgrades survive every run. Ward hearts apply when starting a new run. Other upgrades improve your current build too.'));
   for(const [id,u]of Object.entries(E.upgrades)){
    const panel=el('article','shopItem frame'),row=el('div','row'),copy=el('div','description'),level=meta.upgrades[id],cost=E.upgradeCost(meta,id);
-   copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+level+' / '+u.max),el('p','',u.desc));
+   copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+compact(level)+(u.max===Number.MAX_SAFE_INTEGER?' · KEEPS GROWING':' / '+u.max)),el('p','',u.desc));
    const purchase=button(level>=u.max?'MAX LEVEL':compact(cost)+' '+(u.currency==='coins'?'coins':'crystals'),()=>{
     E.accrue(meta);if(E.buy(meta,id)){sound('buy');vibrate(12);save();updateHome();renderPage();}
    },level>=u.max||meta[u.currency]<cost,'primary');
@@ -171,6 +175,8 @@ function enemyPortrait(type){
 function updateHUD(){
  $('coins').textContent='● '+compact(meta.coins);$('shards').textContent='✦ '+compact(meta.shards);
  updateAutoControls();
+ if(screen==='page'&&page==='tree')treeRefresh();
+ if(screen==='page'&&page==='shop')refreshJourneys();
  const r=meta.run;if(!r)return;
  $('pilotToggle').textContent='Auto · '+(pilotOn?'ON':'OFF');
  $('pilotToggle').classList.toggle('on',pilotOn);
@@ -179,7 +185,7 @@ function updateHUD(){
  $('realmLabel').textContent=E.realms[area]+' · '+E.conditions[r.modifier||'calm'].name+' ⓘ'+(r.wave>40?' · Ascension '+(r.wave-40):'');
  $('realmLabel').title=E.conditions[r.modifier||'calm'].desc;
  $('health').textContent='♥ '+Math.ceil(r.hp)+' / '+r.maxHp;
- $('battleStats').textContent=compact(E.damage(meta,r))+' DMG · '+compact(r.kills)+' KILLS';
+ $('battleStats').textContent=compact(E.power(meta,r))+' DMG · '+compact(r.kills)+' KILLS';
  $('waveProgress').style.width=(r.target?r.resolved/r.target*100:0)+'%';
  $('combo').textContent=r.combo>=5?r.combo+'× COMBO':'';
  $('actionInfo').textContent=(r.slashCD>0?'SLASH '+r.slashCD.toFixed(1)+'s':'SWIPE TO SLASH')+' · '+(r.bounty.done?'BOUNTY COMPLETE':r.bounty.label+' '+r.bounty.progress+'/'+r.bounty.goal);
@@ -219,7 +225,7 @@ $('realmLabel').onclick=()=>{
 function showBuild(){
  const r=meta.run,body=el('div');
  if(!r)return;
- body.append(el('p','',compact(E.damage(meta,r))+' damage · '+compact(r.kills)+' kills · '+compact(r.bestCombo)+' best combo'));
+ body.append(el('p','',compact(E.power(meta,r))+' damage · '+compact(r.kills)+' kills · '+compact(r.bestCombo)+' best combo'));
  const list=el('div','buildList');
  for(const [id,n]of Object.entries(r.cards))if(n){const c=E.cards.find(c=>c.id===id);list.append(el('span','buildChip',c.name+' ×'+compact(n)));}
  if(!list.children.length)body.append(el('p','','Clear a wave to choose your first evolution.'));
@@ -258,7 +264,7 @@ function processEvents(events){
   if(e.type==='runeCast')specialFx.push({kind:'summon',x:e.x,y:e.y,life:.4,max:.4});
   if(e.type==='damage'){
    if(e.kind==='crit')sound('crit');
-   if(meta.settings.numbers)texts.push({x:e.x,y:e.y,text:e.kind==='crit'?'CRIT '+compact(Math.ceil(e.amount)):compact(Math.max(1,Math.round(e.amount))),color:e.kind==='crit'?'#ffe184':e.kind==='poison'?'#d5a2ff':'#e9ffff',life:.7,max:.7,big:e.kind==='crit'});
+   if(meta.settings.numbers)texts.push({x:e.x,y:e.y,text:e.kind==='crit'?'CRIT '+compact(E.hitPower(meta,meta.run.scaleExp?e.amount:Math.ceil(e.amount))):compact(E.hitPower(meta,meta.run.scaleExp?e.amount:Math.max(1,Math.round(e.amount)))),color:e.kind==='crit'?'#ffe184':e.kind==='poison'?'#d5a2ff':'#e9ffff',life:.7,max:.7,big:e.kind==='crit'});
   }
   if(e.type==='kill'){
    sound('pop');addBurst(e.x,e.y,enemyColors[e.color],e.boss?23:10);
@@ -502,7 +508,7 @@ function settings(){
   }));dialog('Reset this save?',confirm);
  }));
  if(storageFailed)menu.prepend(el('p','notice','Device saving is unavailable or a previous save could not be read. Export a backup to keep this session.'));
- menu.prepend(el('p','notice','Eternal Expedition · v5.1.0 · Unlimited sanctuary income · Smart offline waves'),button('Check for game update',checkUpdate));
+ menu.prepend(button('Large number guide',()=>{const body=el('div','menuButtons');body.append(el('p','','K, M, B, T, Qa, Qi and the usual suffixes continue through Vg. After Vg, numbers use aa, ab, ac and onward. These letter suffixes keep growing; the game does not switch to scientific notation.'),button('Back',settings));dialog('Big numbers, simple labels',body);}),el('p','notice','Growing Worlds · v6.0.0 · Skill tree · Saved Auto'),button('Check for game update',checkUpdate));
  dialog('Settings',menu);
 }
 $('settings').onclick=()=>{sound('ui');settings();};
@@ -521,7 +527,7 @@ function exportSave(){
 $('import').onchange=async event=>{
  const file=event.target.files[0];if(!file)return;
  try{
-  if(file.size>3e6)throw Error('Too large');
+  if(file.size>12e6)throw Error('Too large');
   const imported=E.normalize(JSON.parse(await file.text()));
   const menu=el('div','menuButtons');menu.append(el('p','','Replace Slimefall with this imported save? Tideforge saves are separate.'),button('Export current backup',exportSave),button('Use imported save',()=>{
    meta=imported;pilotOn=meta.settings.auto;autoPaused=false;E.accrue(meta);F.accrue(meta);X.addElapsed(meta);save();showHome();catchUp();notify('Your Slimefall save is restored.');
@@ -574,9 +580,9 @@ function bankHaven(result,message){
 function renderHavenPage(){
  const root=$('pageContent');root.replaceChildren();
  if(page==='village'){
-  const intro=el('div','notice','Play a short activity between runs. Stardust restores the village. Each landmark adds 10% sanctuary income. Restoring all three grants a second free card reroll per wave.');
+  const intro=el('div','notice','Pick a game to play while Auto handles your battle. Little adventure goals give skill points, and every game earns coins and stardust.');
   root.append(intro);
-  const activities=[['runes',0,'Runeforge','Remember glowing rune sequences. Short rounds, no time limit on your answer.'],['fishing',1,'Moonpool','Watch the float and reel at the bite. Three casts per peaceful trip.'],['stars',2,'Star map','Rotate crystal conduits to connect starlight. A puzzle with no timer.']];
+  const activities=[['runes',0,'Memory game','Remember glowing rune sequences. Short rounds, no time limit on your answer.'],['fishing',1,'Fishing','Watch the float and reel at the bite. Three casts per peaceful trip.'],['stars',2,'Star puzzle','Rotate crystal conduits to connect starlight. A puzzle with no timer.']];
   for(const [key,index,name,description]of activities){
    const c=el('article','frame activityCard');c.append(havenIcon(index),el('h3','',name),el('p','',description),button('Visit '+name,()=>openPage(key),false,'primary'));root.append(c);
   }
@@ -827,4 +833,68 @@ function resolveWave(wave){
  if(pilotOn)autoChoose();else if(screen==='combat')showDraft();
  if(screen==='home')updateHome();
  save();
+}
+
+$('openTree').onclick=()=>openPage('tree');
+document.querySelectorAll('[data-main]').forEach(b=>b.onclick=()=>{
+ sound('ui');const name=b.dataset.main;
+ if(name==='home')showHome();else if(name==='combat'){if(meta.run&&meta.run.phase!=='over')resumeRun();else if(meta.run?.phase==='over')openPage('expedition');else begin();}else openPage(name);
+});
+function renderShop(root){
+ renderJourneys(root);
+ const items=[['tree','Skills','Choose a path and keep growing.','⬡'],['workshop','Battle upgrades','Spend coins to strengthen your adventure.','⚔'],['forge','Rune forge','Merge runes and fill guild orders.','✧'],['research','Research','Turn stardust into lasting boosts.','✦'],['milestones','Rewards','Claim your milestones.','★'],['collection','Your powers','See the powers you have found.','▣'],['bestiary','Slime guide','Meet the slimes and bosses.','●'],['expedition','Offline adventure','See results, upgrade and retry.','↗']];
+ for(const [page,title,copy,symbol]of items){const card=button('',()=>openPage(page),false,'simpleMenuCard');card.append(el('span','menuSymbol',symbol),el('span','menuCopy'));card.lastChild.append(el('b','',title),el('small','',copy));card.append(el('span','','→'));root.append(card);}
+}
+function renderHomeGoal(){
+ const root=$('homeGoal');if(!root)return;root.replaceChildren();
+ let slot=meta.tree.tasks.findIndex((_,i)=>{const t=T.task(meta,i);return t.progress>=t.goal;});if(slot<0)slot=2;
+ const t=T.task(meta,slot),row=el('div','goalCard'),copy=el('div');copy.append(el('small','','LITTLE ADVENTURE'),el('b','',t.label),el('small','',t.progress+'/'+t.goal+' · +3 skill points'));
+ row.append(copy,button(t.progress>=t.goal?'Claim':'Go',()=>{if(t.progress>=t.goal){if(T.claim(meta,slot)){sound('buy');notify('+3 skill points!');save();updateHome();updateHUD();}}else if(t.page==='combat'){if(meta.run&&meta.run.phase!=='over')resumeRun();else begin();}else{if(t.kind==='orders')forgeTab='orders';openPage(t.page);}},false,t.progress>=t.goal?'primary':''));root.append(row);
+}
+function renderJourneys(root){
+ const card=el('div','journeyCard');card.append(el('h3','','Earn more skill points'));
+ for(let i=0;i<3;i++){const t=T.task(meta,i),row=el('div','journeyRow'),copy=el('span');row.dataset.taskSlot=i;copy.append(el('b','',t.label),el('small','',t.progress+'/'+t.goal+' · +3 points'));
+  row.append(copy,button(t.progress>=t.goal?'Claim':'Go',()=>{const t=T.task(meta,i);if(t.progress>=t.goal){if(T.claim(meta,i)){sound('buy');notify('+3 skill points!');save();renderPage();updateHUD();}}else if(t.page==='combat'){if(meta.run?.phase==='fight')resumeRun();else if(meta.run?.phase==='over')openPage('expedition');else begin();}else{if(t.kind==='orders')forgeTab='orders';openPage(t.page);}},false,t.progress>=t.goal?'primary':''));card.append(row);
+ }root.append(card);
+}
+function refreshJourneys(){for(const row of document.querySelectorAll('[data-task-slot]')){const t=T.task(meta,+row.dataset.taskSlot),b=row.querySelector('button');row.querySelector('small').textContent=t.progress+'/'+t.goal+' · +3 points';b.textContent=t.progress>=t.goal?'Claim':'Go';b.classList.toggle('primary',t.progress>=t.goal);}}
+let selectedTreeNode='0:1:0',treeResize=()=>{},treeRefresh=()=>{};
+window.addEventListener('resize',()=>{if(screen==='page'&&page==='tree')treeResize();});
+function renderTree(root){
+ const wallet=el('div','treeWallet');wallet.append(el('div','',compact(T.available(meta))+' skill points'),el('small','','1 point per 10 best waves · More from little adventures'));
+ const tools=el('div','treeToolbar');for(const [label,fn]of [['−',()=>zoom(.8)],['+',()=>zoom(1.25)],['Center',()=>{camera.x=0;camera.y=0;camera.zoom=.55;apply();}],['Next path',focusNext]])tools.append(button(label,fn,false));
+ const viewport=el('div','treeViewport');viewport.setAttribute('aria-label','Skill tree. Drag to explore, pinch or use zoom buttons.');
+ const world=el('div','treeWorld');viewport.append(world);
+ const detail=el('div','treeDetail');
+ const hint=el('p','treeHint','Drag to explore · Pinch to zoom · Tap a hexagon');
+ root.append(wallet,tools,viewport,hint,detail);
+ const camera=meta.tree.camera||(meta.tree.camera={x:0,y:0,zoom:.55});
+ const nodes=T.visible(meta),byId=new Map(nodes.map(n=>[n.id,n]));
+ const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),bounds=nodes.reduce((b,n)=>({minX:Math.min(b.minX,n.x-100),minY:Math.min(b.minY,n.y-100),maxX:Math.max(b.maxX,n.x+100),maxY:Math.max(b.maxY,n.y+100)}),{minX:-200,minY:-200,maxX:200,maxY:200});
+ svg.setAttribute('viewBox',[bounds.minX,bounds.minY,bounds.maxX-bounds.minX,bounds.maxY-bounds.minY].join(' '));Object.assign(svg.style,{position:'absolute',left:bounds.minX+'px',top:bounds.minY+'px',width:bounds.maxX-bounds.minX+'px',height:bounds.maxY-bounds.minY+'px',overflow:'visible',pointerEvents:'none'});
+ for(const n of nodes){const p=byId.get(n.parent)||{x:0,y:0},line=document.createElementNS(ns,'line');line.setAttribute('x1',p.x);line.setAttribute('y1',p.y);line.setAttribute('x2',n.x);line.setAttribute('y2',n.y);line.setAttribute('stroke',meta.tree.nodes[n.id]?T.branches[n.branch].color:'#cbd8d1');line.setAttribute('stroke-width',meta.tree.nodes[n.id]?'7':'4');svg.append(line);}world.append(svg);
+ const core=el('div','treeCore','SLIME\nHEART');world.append(core);
+ for(const n of nodes){const level=meta.tree.nodes[n.id]||0,ready=T.canBuy(meta,n.id),unlocked=n.parent==='core'||!!meta.tree.nodes[n.parent];const b=el('button','hexNode'+(level?' owned':'')+(ready?' available':'')+(!unlocked?' locked':'')+(n.cap?' keystone':''));b.dataset.treeNode=n.id;b.style.left=n.x-43+'px';b.style.top=n.y-44+'px';b.style.setProperty('--branch',T.branches[n.branch].color);b.setAttribute('aria-label',n.name+', '+level+'/'+n.max+(ready?', available':''));
+  b.append(el('span','hexSymbol',n.symbol),el('small','',n.cap?'KEYSTONE':T.branches[n.branch].name),el('b','',level?level+'/'+n.max:String(T.price(meta,n.id))+' pt'));
+  b.onclick=e=>{if(e.detail===0)select(n.id);};world.append(b);
+ }
+ const pointers=new Map();let last=null,gesture=null,start=null,dragged=false;
+ function size(){return {w:viewport.clientWidth||390,h:viewport.clientHeight||400};}
+ function apply(){const {w,h}=size();world.style.setProperty('--map-zoom',camera.zoom);world.classList.toggle('distant',camera.zoom<.35);world.classList.toggle('detailZoom',camera.zoom>=.9);world.style.transform='translate('+(w/2+camera.x)+'px,'+(h/2+camera.y)+'px) scale('+camera.zoom+')';dirty=true;}
+ function zoom(factor,anchor){const {w,h}=size(),a=anchor||{x:w/2,y:h/2},old=camera.zoom,next=Math.max(.18,Math.min(1.8,old*factor));camera.x=a.x-w/2-(a.x-w/2-camera.x)*next/old;camera.y=a.y-h/2-(a.y-h/2-camera.y)*next/old;camera.zoom=next;apply();}
+ function select(id){selectedTreeNode=id;world.querySelectorAll('[data-tree-node]').forEach(n=>n.classList.toggle('selected',n.dataset.treeNode===id));details();}
+ function details(){const n=T.node(selectedTreeNode);detail.replaceChildren();if(!n)return;const level=meta.tree.nodes[n.id]||0,price=T.price(meta,n.id),copy=el('div');copy.append(el('h3','',n.name),el('p','',n.desc),el('small','',level+'/'+n.max+' ranks · '+T.branches[n.branch].name));
+  const ready=T.canBuy(meta,n.id),needs=n.parent!=='core'&&!meta.tree.nodes[n.parent];detail.append(copy,button(level>=n.max?'Complete':needs?'Unlock the connected path':availableLabel(),()=>{if(T.buy(meta,n.id)){sound('buy');vibrate(18);save();renderTreeFresh();updateHUD();}},!ready,'primary'));
+  function availableLabel(){return availablePoints()>=price?'Unlock · '+price+' pt':'Need '+price+' points';}function availablePoints(){return T.available(meta);}
+ }
+ function renderTreeFresh(){root.replaceChildren();renderTree(root);}
+ function focusNext(){const target=nodes.filter(n=>T.canBuy(meta,n.id)).sort((a,b)=>a.depth-b.depth||a.fork-b.fork||a.branch-b.branch)[0]||nodes.find(n=>!(meta.tree.nodes[n.id]||0));if(!target)return;camera.x=-target.x*camera.zoom;camera.y=-target.y*camera.zoom;select(target.id);apply();}
+ function point(e){const rect=viewport.getBoundingClientRect();return {x:e.clientX-rect.left,y:e.clientY-rect.top};}
+ function pinch(){const p=[...pointers.values()];return {x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2,d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};}
+ viewport.onpointerdown=e=>{if(e.button!==undefined&&e.button!==0)return;e.preventDefault();const p=point(e);pointers.set(e.pointerId??1,p);try{viewport.setPointerCapture(e.pointerId);}catch{}start={...p,id:e.target.closest?.('[data-tree-node]')?.dataset.treeNode};last=p;dragged=false;if(pointers.size===2){gesture=pinch();dragged=true;}};
+ viewport.onpointermove=e=>{const id=e.pointerId??1;if(!pointers.has(id))return;const p=point(e);pointers.set(id,p);if(pointers.size>=2){const next=pinch();zoom(next.d/Math.max(1,gesture.d),{x:gesture.x,y:gesture.y});camera.x+=next.x-gesture.x;camera.y+=next.y-gesture.y;gesture=next;dragged=true;apply();}else{if(Math.hypot(p.x-start.x,p.y-start.y)>6)dragged=true;if(dragged){camera.x+=p.x-last.x;camera.y+=p.y-last.y;apply();}last=p;}};
+ viewport.onpointerup=e=>{if(!pointers.has(e.pointerId??1))return;if(!dragged&&start?.id)select(start.id);pointers.delete(e.pointerId??1);gesture=null;last=[...pointers.values()][0]||null;start=last?{...last}:null;save();};
+ viewport.onpointercancel=()=>{pointers.clear();gesture=null;last=null;start=null;dragged=true;};
+ viewport.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.12:1/1.12,point(e));},{passive:false});
+ treeResize=apply;treeRefresh=()=>{wallet.firstChild.textContent=compact(T.available(meta))+' skill points';for(const b of world.querySelectorAll('[data-tree-node]'))b.classList.toggle('available',T.canBuy(meta,b.dataset.treeNode));const n=T.node(selectedTreeNode),b=detail.querySelector('button');if(n&&b){const level=meta.tree.nodes[n.id]||0,needs=n.parent!=='core'&&!meta.tree.nodes[n.parent],price=T.price(meta,n.id);b.disabled=!T.canBuy(meta,n.id);b.textContent=level>=n.max?'Complete':needs?'Unlock the connected path':T.available(meta)>=price?'Unlock · '+price+' pt':'Need '+price+' points';}};apply();select(selectedTreeNode);
 }

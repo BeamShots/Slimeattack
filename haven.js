@@ -6,16 +6,17 @@ const buildings=[
  {id:'fountain',name:'Star fountain',icon:5,cost:18,desc:'Wake the fountain. Sanctuary income +10%.'},
  {id:'tree',name:'Lunar garden',icon:6,cost:30,desc:'Restore the lunar tree. Sanctuary income +10%.'}
 ];
-function town(){return {dust:0,restored:[],best:{runes:0,fish:0,stars:0},fishBook:[]};}
+function town(){return {dust:0,totals:{runes:0,fish:0,stars:0},restored:[],best:{runes:0,fish:0,stars:0},fishBook:[]};}
 function normalize(raw){
  const s=town();if(!raw||typeof raw!=='object')return s;
  s.dust=Number.isFinite(raw.dust)?Math.max(0,Math.floor(raw.dust)):0;
  s.restored=Array.isArray(raw.restored)?[...new Set(raw.restored.filter(id=>buildings.some(b=>b.id===id)))]:[];
+ for(const k in s.totals)s.totals[k]=Number.isFinite(raw.totals?.[k])?Math.max(0,Math.floor(raw.totals[k])):0;
  for(const k in s.best)s.best[k]=Number.isFinite(raw.best?.[k])?Math.max(0,Math.min(1e7,Math.floor(raw.best[k]))):0;
  s.fishBook=Array.isArray(raw.fishBook)?[...new Set(raw.fishBook.filter(n=>Number.isInteger(n)&&n>=0&&n<5))]:[];return s;
 }
 function reward(meta,coins,dust,game,score){
- meta.coins+=coins;meta.haven.dust+=dust;
+ meta.coins+=coins;meta.haven.dust+=dust;meta.haven.totals[game]++;
  meta.haven.best[game]=Math.max(meta.haven.best[game],score);return {coins,dust};
 }
 function restore(meta,id){

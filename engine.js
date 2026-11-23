@@ -3,6 +3,8 @@
 const H=typeof module!=='undefined'?require('./haven.js'):root.Haven;
 const F=typeof module!=='undefined'?require('./forge.js'):root.Moonforge;
 const X=typeof module!=='undefined'?require('./expedition.js'):root.Expedition;
+const T=typeof module!=='undefined'?require('./tree.js'):root.SkillTree;
+const N=typeof module!=='undefined'?require('./format.js'):root.GameNumbers;
 const cards=[
  {id:'power',name:'Emerald edge',rarity:'common',icon:0,max:8,desc:'+40% tap and companion damage. Stacks multiplicatively.'},
  {id:'chain',name:'Living lightning',rarity:'rare',icon:1,max:5,desc:'Each hit has a 45% chance to chain to 2 more slimes per level. Level 3 always chains.'},
@@ -45,13 +47,16 @@ const cards=[
  {id:'starfall',name:'Celestial monsoon',rarity:'legendary',icon:12,max:12,minWave:60,desc:'Every 3 seconds, bombard the 8 lowest slimes with a storm of stars.'},
  {id:'entropy',name:'Eclipse hunger',rarity:'legendary',icon:13,max:12,minWave:100,desc:'Every 7 seconds, consume 3% of each enemy’s maximum health per level. Bosses take one third.'},
  {id:'oath',name:'Lunar oath',rarity:'epic',icon:8,max:20,minWave:90,desc:'Restore one heart per level after every cleared wave. Recover 2 hearts now.'},
+ {id:'mastery',name:'Battle mastery',rarity:'common',icon:0,max:Number.MAX_SAFE_INTEGER,minWave:30,desc:'+1% multiplicative damage. This evolution has no level cap.'},
+ {id:'harvest',name:'Golden age',rarity:'rare',icon:9,max:Number.MAX_SAFE_INTEGER,minWave:40,desc:'+5% coins per rank. Keeps growing after your original powers are complete.'},
+ {id:'starlore',name:'Spirit training',rarity:'epic',icon:7,max:Number.MAX_SAFE_INTEGER,minWave:50,desc:'+1% all damage and +1% companion damage per rank. No level cap.'},
  {id:'stasis',name:'Stolen moment',rarity:'epic',icon:35,max:4,minWave:10,desc:'Timed counters slow the battlefield and restore active-power cooldowns faster.'}
 ];
 const upgrades={
- blade:{name:'Ancient blade',icon:0,desc:'+1 permanent base damage per level.',base:30,currency:'coins',max:30},
+ blade:{name:'Ancient blade',icon:0,desc:'+1 permanent base damage per level.',base:30,currency:'coins',soft:30,max:Number.MAX_SAFE_INTEGER},
  hull:{name:'Spirit ward',icon:8,desc:'+1 starting heart per level.',base:45,currency:'coins',max:15},
- pet:{name:'Companion bond',icon:7,desc:'+15% companion damage and 3% fire speed per level.',base:40,currency:'coins',max:25},
- garden:{name:'Gel sanctuary',icon:11,desc:'Increase idle coin growth. Works while the game is closed.',base:35,currency:'coins',max:25},
+ pet:{name:'Companion bond',icon:7,desc:'+15% companion damage and 3% fire speed per level.',base:40,currency:'coins',soft:25,max:Number.MAX_SAFE_INTEGER},
+ garden:{name:'Gel sanctuary',icon:11,desc:'Increase idle coin growth. Works while the game is closed.',base:35,currency:'coins',soft:25,max:Number.MAX_SAFE_INTEGER},
  luck:{name:'Fate crystal',icon:10,desc:'Increase rare, epic and legendary card odds.',base:2,currency:'shards',max:12}
 };
 const milestones=[
@@ -65,13 +70,13 @@ const milestones=[
  {id:'seventyfive',name:'World breaker',desc:'Clear wave 75.',goal:m=>m.best>=75,reward:{coins:2400,shards:25}},
  {id:'hundredwave',name:'Endless ascension',desc:'Clear wave 100.',goal:m=>m.best>=100,reward:{coins:4000,shards:40}}
 ];
-function fresh(now=Date.now()){return {version:1,forge:F.fresh(now),expedition:X.fresh(now),haven:H.town(),activeGuideSeen:false,coins:0,shards:0,best:0,kills:0,runs:0,upgrades:{blade:0,hull:0,pet:0,garden:0,luck:0},claimed:[],dex:{},idle:{bank:0,lastAt:now},settings:{auto:false,sound:true,music:false,haptics:true,shake:true,effects:'balanced',numbers:true},run:null};}
+function fresh(now=Date.now()){return {version:1,tree:T.fresh(),forge:F.fresh(now),expedition:X.fresh(now),haven:H.town(),activeGuideSeen:false,coins:0,shards:0,best:0,kills:0,runs:0,upgrades:{blade:0,hull:0,pet:0,garden:0,luck:0},claimed:[],dex:{},idle:{bank:0,lastAt:now},settings:{auto:false,sound:true,music:false,haptics:true,shake:true,effects:'balanced',numbers:true},run:null};}
 const bound=(v,a,b)=>Number.isFinite(v)?Math.max(a,Math.min(b,v)):a;
 function normalize(raw,now=Date.now()){
  if(!raw||raw.version!==1||!raw.upgrades||!raw.idle)throw Error('This is not a Slimefall save.');
  const m=fresh(now);m.forge=F.normalize(raw.forge,now);m.expedition=X.normalize(raw.expedition,now);m.activeGuideSeen=raw.activeGuideSeen===true;m.haven=H.normalize(raw.haven);
  for(const k of ['coins','shards','kills','runs'])m[k]=Math.floor(bound(raw[k],0,Number.MAX_VALUE));
- m.best=Math.floor(bound(raw.best,0,Number.MAX_SAFE_INTEGER));
+ m.best=Math.floor(bound(raw.best,0,Number.MAX_SAFE_INTEGER));m.tree=T.normalize(raw.tree,{...m,run:raw.run});
  for(const k in upgrades)m.upgrades[k]=Math.floor(bound(raw.upgrades[k],0,upgrades[k].max));
  m.claimed=Array.isArray(raw.claimed)?[...new Set(raw.claimed.filter(id=>milestones.some(x=>x.id===id)))]:[];
  for(const c of cards)if(raw.dex?.[c.id])m.dex[c.id]=true;
@@ -80,6 +85,7 @@ function normalize(raw,now=Date.now()){
  m.idle={bank:bound(raw.idle.bank,0,Number.MAX_VALUE),lastAt:bound(raw.idle.lastAt,0,Number.MAX_VALUE)};
  // An invalid run never prevents recovery of the permanent collection.
  if(raw.run){try{m.run=normalizeRun(raw.run,m);}catch{m.run=null;}}
+ m.tree=T.normalize(raw.tree,m);
  if(m.expedition.trial){
   try{
    const t=m.expedition.trial,run=normalizeRun(t.run,m);
@@ -93,16 +99,17 @@ function normalizeRun(raw,m){
  if(!['fight','draft','over'].includes(raw.phase)||!Number.isInteger(raw.wave)||raw.wave<1||raw.wave>Number.MAX_SAFE_INTEGER)throw Error('Invalid run');
  const r=newRunData(m);
  for(const k of ['wave','spawned','resolved','target','kills','earned','hits','combo','bestCombo','nextId','rerolls'])r[k]=Math.floor(bound(raw[k],0,1e9));
+ r.scaleExp=bound(raw.scaleExp,0,Number.MAX_SAFE_INTEGER);r.earned=bound(raw.earned,0,Number.MAX_VALUE);
  r.wave=raw.wave;r.target=Math.floor(bound(raw.target,8,100));r.modifier=condition(r.wave);
  r.bonusSpawned=Math.floor(bound(raw.bonusSpawned,0,24));
  r.spawned=Math.min(r.target,r.spawned);r.resolved=Math.min(r.spawned,r.resolved);
  for(const k of ['hp','maxHp','time','spawnClock','petClock','meteorClock','vortexClock','freeze','fury','frostCD','furyCD','lastHit','vortexTime','extraClock','revives','energy','slashCD','slowmo','pilotClock','forgeBoost'])r[k]=bound(raw[k],0,k.includes('CD')?60:1e9);
- r.maxHp=bound(r.maxHp,1,100);r.hp=Math.min(r.hp,r.maxHp);r.phase=raw.phase;
+ r.maxHp=bound(r.maxHp,1,healthCap(m));r.hp=Math.min(r.hp,r.maxHp);r.phase=raw.phase;
  for(const c of cards)r.cards[c.id]=Math.floor(bound(raw.cards?.[c.id],0,c.max));
  r.enemies=[];
  for(const e of (Array.isArray(raw.enemies)?raw.enemies:[]).slice(0,60)){
   if(!Number.isInteger(e.id)||!Number.isFinite(e.hp)||e.hp<=0)continue;
-  r.enemies.push({id:e.id,type:Math.floor(bound(e.type,0,28)),x:bound(e.x,.08,.92),y:bound(e.y,-.2,.94),hp:bound(e.hp,.01,Number.MAX_VALUE),max:bound(e.max,1,Number.MAX_VALUE),speed:bound(e.speed,.01,.5),boss:!!e.boss,poison:bound(e.poison,0,Number.MAX_VALUE),poisonTime:bound(e.poisonTime,0,4),slow:bound(e.slow,0,6),hit:0,clock:bound(e.clock,0,100),mini:!!e.mini,elite:!!e.elite,guard:Math.floor(bound(e.guard,0,3)),curse:bound(e.curse,0,5),haste:bound(e.haste,0,2),weakTime:bound(e.weakTime,0,3),parryTime:bound(e.parryTime,0,2),entered:typeof e.entered==='boolean'?e.entered:e.y>.02});
+  r.enemies.push({id:e.id,type:Math.floor(bound(e.type,0,28)),x:bound(e.x,.08,.92),y:bound(e.y,-.2,.94),hp:bound(e.hp,Number.MIN_VALUE,Number.MAX_VALUE),max:bound(e.max,Number.MIN_VALUE,Number.MAX_VALUE),speed:bound(e.speed,.01,.5),boss:!!e.boss,poison:bound(e.poison,0,Number.MAX_VALUE),poisonTime:bound(e.poisonTime,0,4),slow:bound(e.slow,0,6),hit:0,clock:bound(e.clock,0,100),mini:!!e.mini,elite:!!e.elite,guard:Math.floor(bound(e.guard,0,3)),curse:bound(e.curse,0,5),haste:bound(e.haste,0,2),weakTime:bound(e.weakTime,0,3),parryTime:bound(e.parryTime,0,2),entered:typeof e.entered==='boolean'?e.entered:e.y>.02});
  }
  if(new Set(r.enemies.map(e=>e.id)).size!==r.enemies.length||r.enemies.length+r.resolved!==r.spawned)throw Error('Inconsistent wave');
  r.nextId=Math.max(r.nextId,...r.enemies.map(e=>e.id+1));
@@ -119,7 +126,7 @@ function normalizeRun(raw,m){
  if(r.hp<=0)r.phase='over';
  return r;
 }
-function idleRate(m){return (1+m.upgrades.garden*.6)/6*(1+.1*m.haven.restored.length)*(1+.2*m.forge.perks.flow);}
+function idleRate(m){return (1+m.upgrades.garden*.6)/6*(1+.1*m.haven.restored.length)*(1+.2*m.forge.perks.flow)*(1+.08*T.stats(m).coins);}
 function accrue(m,now=Date.now()){
  const seconds=Math.max(0,(now-m.idle.lastAt)/1000);if(now<m.idle.lastAt)return 0;
  const before=m.idle.bank;
@@ -127,18 +134,38 @@ function accrue(m,now=Date.now()){
  m.idle.lastAt=now;return m.idle.bank-before;
 }
 function claimIdle(m){const count=Math.floor(m.idle.bank);m.coins+=count;m.idle.bank-=count;return count;}
-function upgradeCost(m,id){const d=upgrades[id];return d?Math.ceil(d.base*Math.pow(id==='luck'?1.65:1.43,m.upgrades[id])):Infinity;}
+function upgradeCost(m,id){const d=upgrades[id];if(!d)return Infinity;const level=m.upgrades[id],soft=d.soft||d.max;return Math.ceil(d.base*Math.pow(id==='luck'?1.65:1.43,Math.min(soft,level))*(level>soft?Math.pow(1+(level-soft)/8,2):1));}
 function buy(m,id){const u=upgrades[id];if(!u||m.upgrades[id]>=u.max)return false;const cost=upgradeCost(m,id);if(m[u.currency]<cost)return false;m[u.currency]-=cost;m.upgrades[id]++;return true;}
-function newRunData(m){return {phase:'fight',wave:1,hp:Math.min(100,5+m.upgrades.hull+m.forge.perks.ward),maxHp:Math.min(100,5+m.upgrades.hull+m.forge.perks.ward),enemies:[],cards:{},offers:[],target:8,spawned:0,resolved:0,kills:0,earned:0,hits:0,combo:0,bestCombo:0,time:0,lastHit:-9,spawnClock:1,petClock:0,meteorClock:0,vortexClock:0,freeze:0,fury:0,frostCD:0,furyCD:0,nextId:1,rerolls:m.haven.restored.length===3?2:1,modifier:'calm',bonusSpawned:0,extraClock:0,vortexTime:0,revives:0,mines:[],energy:0,slashCD:0,slowmo:0,pilotClock:0,forgeBoost:0,pickups:[],nextPickup:1,actions:{swipes:0,weak:0,parries:0,collected:0,bursts:0},bounty:makeBounty(1)};}
+function healthCap(m){return 100+T.stats(m).health;}
+function startingHealth(m){return Math.min(healthCap(m),5+m.upgrades.hull+m.forge.perks.ward+T.stats(m).health);}
+function newRunData(m){return {phase:'fight',scaleExp:0,wave:1,hp:startingHealth(m),maxHp:startingHealth(m),enemies:[],cards:{},offers:[],target:8,spawned:0,resolved:0,kills:0,earned:0,hits:0,combo:0,bestCombo:0,time:0,lastHit:-9,spawnClock:1,petClock:0,meteorClock:0,vortexClock:0,freeze:0,fury:0,frostCD:0,furyCD:0,nextId:1,rerolls:m.haven.restored.length===3?2:1,modifier:'calm',bonusSpawned:0,extraClock:0,vortexTime:0,revives:0,mines:[],energy:0,slashCD:0,slowmo:0,pilotClock:0,forgeBoost:0,pickups:[],nextPickup:1,actions:{swipes:0,weak:0,parries:0,collected:0,bursts:0},bounty:makeBounty(1)};}
 function start(m){m.expedition=X.fresh();m.runs++;m.run=newRunData(m);return m.run;}
 function level(r,id){return r.cards[id]||0;}
-function damage(m,r){
+function legacyDamage(m,r){
  let n=(2+m.upgrades.blade)*Math.pow(1.4,level(r,'power'));
  if(r.hp<=r.maxHp/2)n*=1+level(r,'berserk')*.6;
  n*=Math.pow(1.12,level(r,'eternal'))*Math.pow(1.3,level(r,'infinity'))*Math.pow(1.02,Math.max(0,r.wave-40));
  if(r.fury>0)n*=2;
- return n*F.damage(m)*(r.forgeBoost>0?2:1);
+ return n*F.damage(m)*(r.forgeBoost>0?2:1)*Math.pow(1.01,level(r,'mastery')+level(r,'starlore'))*Math.pow(1.12,T.stats(m).attack);
 }
+function basePowerLog(m,r){
+ let log=Math.log10(2+m.upgrades.blade)+Math.log10(1.4)*level(r,'power')+Math.log10(1.12)*level(r,'eternal')+Math.log10(1.3)*level(r,'infinity')+Math.log10(1.02)*Math.max(0,r.wave-40);
+ log+=Math.log10(1+.08*m.forge.perks.edge)+Math.log10(1+.05*m.forge.perks.echo)+Math.log10(1.01)*(level(r,'mastery')+level(r,'starlore'))+Math.log10(1.12)*T.stats(m).attack;
+ return log;
+}
+function powerLog(m,r){let log=basePowerLog(m,r);if(r.hp<=r.maxHp/2)log+=Math.log10(1+level(r,'berserk')*.6);if(r.fury>0)log+=Math.log10(2);if(r.forgeBoost>0)log+=Math.log10(2);return log;
+}
+function enemyLog(wave){return Math.log10(2.5+wave*1.45)+Math.log10(1.085)*Math.min(wave,40)+Math.log10(1.035)*Math.max(0,wave-40);}
+function ensureScale(m,r){
+ const log=Math.max(basePowerLog(m,r)+Math.log10(1+level(r,'berserk')*.6)+2*Math.log10(2),enemyLog(r.wave)),next=Math.max(0,Math.floor((log-100)/50)*50),old=r.scaleExp||0;
+ if(next===old)return;
+ const factor=Math.pow(10,Math.max(-200,Math.min(200,old-next)));
+ for(const e of r.enemies){e.hp=Math.max(1e-200,e.hp*factor);e.max=Math.max(1e-200,e.max*factor);e.poison=Math.max(0,e.poison*factor);}
+ r.scaleExp=next;
+}
+function damage(m,r){ensureScale(m,r);const log=powerLog(m,r);return !r.scaleExp&&log<200?legacyDamage(m,r):Math.pow(10,Math.max(-200,Math.min(200,log-r.scaleExp)));}
+function power(m,r){return N.fromLog(powerLog(m,r));}
+function hitPower(m,amount){return m.run?.scaleExp?N.fromLog(Math.log10(Math.max(Number.MIN_VALUE,amount))+m.run.scaleExp):amount;}
 function drawCards(m,r,rng=Math.random){
  const pool=cards.filter(c=>r.wave>=(c.minWave||0)&&level(r,c.id)<c.max&&(!c.requires||level(r,c.requires)>0)),result=[];
  while(result.length<3&&pool.length){
@@ -170,8 +197,8 @@ function drawCards(m,r,rng=Math.random){
 function choose(m,id,rng=Math.random){
  const r=m.run;if(!r||r.phase!=='draft'||!r.offers.includes(id))return false;
  const c=cards.find(c=>c.id===id);r.cards[id]=Math.min(c.max,level(r,id)+1);m.dex[id]=true;
- if(id==='mend'){r.maxHp=Math.min(100,r.maxHp+1);r.hp=Math.min(r.maxHp,r.hp+3);}
- if(id==='berserk'){r.maxHp=Math.min(100,r.maxHp+1);r.hp=Math.min(r.maxHp,r.hp+1);}
+ if(id==='mend'){r.maxHp=Math.min(healthCap(m),r.maxHp+1);r.hp=Math.min(r.maxHp,r.hp+3);}
+ if(id==='berserk'){r.maxHp=Math.min(healthCap(m),r.maxHp+1);r.hp=Math.min(r.maxHp,r.hp+1);}
  if(id==='oath')r.hp=Math.min(r.maxHp,r.hp+2);
  if(id==='vampire')r.hp=Math.min(r.maxHp,r.hp+1);
  r.wave++;r.bounty=makeBounty(r.wave);r.pickups=[];r.modifier=condition(r.wave);r.target=waveTarget(r.wave);r.bonusSpawned=0;r.mines=[];r.vortexTime=0;r.spawned=0;r.resolved=0;r.enemies=[];r.spawnClock=.7;r.offers=[];r.phase='fight';r.rerolls=m.haven.restored.length===3?2:1;
@@ -198,7 +225,7 @@ function spawn(r,rng=Math.random){
   const list=realm(r.wave)===1?[9,11,16]:realm(r.wave)===2?[10,13,14]:realm(r.wave)===3?[12,15,16]:[9,10,11,12,13,14,15,16];
   type=list[Math.min(list.length-1,Math.floor(rng()*list.length))];
  }else if(r.wave>=3)type=Math.min(4,Math.floor(rng()*Math.min(5,1+r.wave/2)));
- let hp=(2.5+r.wave*1.45)*Math.pow(1.085,Math.min(r.wave,40))*Math.pow(1.035,Math.max(0,r.wave-40));
+ let hp=(!r.scaleExp&&enemyLog(r.wave)<200)?(2.5+r.wave*1.45)*Math.pow(1.085,Math.min(r.wave,40))*Math.pow(1.035,Math.max(0,r.wave-40)):Math.pow(10,Math.max(-200,Math.min(200,enemyLog(r.wave)-(r.scaleExp||0))));
  if(type===2||type===14||type===24)hp*=1.7;
  if(type===5||type===20)hp*=1.2;
  if(r.modifier==='swarm')hp*=.75;
@@ -216,7 +243,7 @@ function addMinion(r,parent,type){
  const e={...parent,id:r.nextId++,type,x:bound(parent.x+(r.bonusSpawned%2?.06:-.06),.08,.92),y:Math.min(.84,parent.y+.01),hp,max:hp,speed:Math.min(.4,parent.speed*1.25),boss:false,mini:true,elite:false,poison:0,poisonTime:0,slow:0,clock:0,guard:0,curse:0,haste:0,weakTime:0,parryTime:0,entered:false};
  r.bonusSpawned++;r.target++;r.spawned++;r.enemies.push(e);return e;
 }
-function giveCoins(m,r,amount){const n=Math.max(1,Math.round(amount*(1+.3*level(r,'fortune'))*(r.modifier==='frenzy'?1.2:1)));m.coins+=n;r.earned+=n;return n;}
+function giveCoins(m,r,amount){const n=Math.max(1,Math.round(amount*(1+.3*level(r,'fortune'))*(r.modifier==='frenzy'?1.2:1)*(1+.05*level(r,'harvest'))*(1+.08*T.stats(m).coins)));m.coins+=n;r.earned+=n;return n;}
 function strike(m,requests,events){
  const r=m.run;if(!r)return;
  const queue=requests.slice();let safety=0;
@@ -271,7 +298,7 @@ function attack(m,id,rng=Math.random,automatic=false,intent='tap'){
    advanceBounty(m,'weak',1,events);events.push({type:'precision',x:e.x,y:e.y});
   }
  }
- const base=damage(m,r)*(automatic?.7*(1+m.upgrades.pet*.15):activeBonus);
+ const base=damage(m,r)*(automatic?.7*(1+m.upgrades.pet*.15)*(1+.01*level(r,'starlore')):activeBonus);
  const crit=rng()<Math.min(.75,.05+level(r,'crit')*.12);
  const amount=base*(crit?3:1);
  if(!automatic){r.combo=r.time-r.lastHit<1.2?r.combo+1:1;r.lastHit=r.time;r.bestCombo=Math.max(r.combo,r.bestCombo);}
@@ -312,7 +339,7 @@ function ability(m,id){
 }
 function step(m,dt,rng=Math.random){
  const r=m.run,events=[];if(!r||r.phase!=='fight')return events;
- dt=bound(dt,0,.1);r.time+=dt;r.spawnClock+=dt;r.petClock+=dt;r.meteorClock+=dt;r.vortexClock+=dt;
+ ensureScale(m,r);dt=bound(dt,0,.1);r.time+=dt;r.spawnClock+=dt;r.petClock+=dt;r.meteorClock+=dt;r.vortexClock+=dt;
  for(const k of ['freeze','fury','frostCD','furyCD','vortexTime','slashCD','slowmo','pilotClock','forgeBoost'])r[k]=Math.max(0,r[k]-dt);
  if(r.combo&&r.time-r.lastHit>1.2)r.combo=0;
  updateActive(m,dt,events);
@@ -338,7 +365,7 @@ function step(m,dt,rng=Math.random){
    strike(m,r.enemies.map(e=>({id:e.id,amount:damage(m,r)*8,kind:'fire'})),events);
   }else{r.hp=0;r.phase='over';events.push({type:'over'});return events;}
  }
- const petInterval=Math.max(.15,1.15*Math.pow(.8,level(r,'haste'))/(1+m.upgrades.pet*.03));
+ const petInterval=Math.max(.15,1.15*Math.pow(.8,level(r,'haste'))/(1+m.upgrades.pet*.03)/(1+.03*T.stats(m).spirit));
  if(r.petClock>=petInterval&&r.enemies.length){
   r.petClock=0;
   const targets=r.enemies.slice().sort((a,b)=>b.y-a.y).slice(0,1+level(r,'familiar'));
@@ -349,13 +376,14 @@ function step(m,dt,rng=Math.random){
   events.push({type:'meteor',x:e.x,y:e.y});
   strike(m,r.enemies.filter(n=>Math.hypot(n.x-e.x,(n.y-e.y)*1.5)<.35).map(n=>({id:n.id,amount:damage(m,r)*6*level(r,'meteor'),kind:'fire'})),events);
  }
- if(level(r,'vortex')&&r.vortexClock>=8&&r.enemies.length){
-  r.vortexClock=0;r.vortexTime=3;events.push({type:'vortex'});
+ const portal=T.stats(m);
+ if((level(r,'vortex')||portal.caps[5])&&r.vortexClock>=8/(1+.02*portal.portals)&&r.enemies.length){
+  r.vortexClock=0;r.vortexTime=3*(1+.04*portal.portals);events.push({type:'vortex'});
   for(const e of r.enemies)e.y=Math.max(-.08,e.y-.15);
-  strike(m,r.enemies.map(n=>({id:n.id,amount:damage(m,r)*3*level(r,'vortex'),kind:'void'})),events);
+  strike(m,r.enemies.map(n=>({id:n.id,amount:damage(m,r)*3*Math.max(1,level(r,'vortex'))*(1+.04*portal.portals),kind:'void'})),events);
  }
  if(r.spawned===r.target&&r.enemies.length===0){
-  r.hp=Math.min(r.maxHp,r.hp+level(r,'oath'));
+  r.hp=Math.min(r.maxHp,r.hp+level(r,'oath')+T.stats(m).caps[2]);
   m.best=Math.max(m.best,r.wave);const coin=giveCoins(m,r,8+r.wave*2);if(r.wave%5===0)m.shards++;
   r.phase='draft';r.offers=drawCards(m,r,rng);events.push({type:'wave',wave:r.wave,coin});
  }
@@ -381,6 +409,7 @@ function updateSpecials(m,dt,events){
   events.push({type:'nova',x:.5,y:.4});
   strike(m,r.enemies.map(e=>({id:e.id,amount:e.max*.03*level(r,'entropy')/(e.boss?3:1),kind:'void'})),events);
  }
+ const sun=T.stats(m).caps[0];if(sun&&crossed(4)&&r.enemies.length){events.push({type:'meteor',x:.5,y:.4});strike(m,r.enemies.slice(0,6).map(e=>({id:e.id,amount:damage(m,r)*(2+sun),kind:'fire'})),events);}
  const danger=()=>r.enemies.slice().sort((a,b)=>b.y-a.y);
  if(level(r,'orbit')&&crossed(2.4)&&r.enemies.length){
   events.push({type:'orbit',x:.5,y:.65});
@@ -458,7 +487,7 @@ function collect(m,id,finishingWave=false){
  const r=m.run,events=[];if(!r||(r.phase!=='fight'&&!(finishingWave&&r.phase==='draft')))return events;
  const p=r.pickups.find(p=>p.id===id);if(!p)return events;
  r.pickups=r.pickups.filter(n=>n.id!==id);r.actions.collected++;
- r.energy=Math.min(100,r.energy+6+level(r,'magnet')*2);
+ r.energy=Math.min(100,r.energy+6+level(r,'magnet')*2+T.stats(m).caps[1]*5);
  if(p.kind==='rune'){
   const owner=r.enemies.find(e=>e.id===p.owner);if(owner){owner.haste=0;owner.guard=0;owner.weakTime=2;owner.y=Math.max(-.08,owner.y-.04);}
   r.slowmo=Math.max(r.slowmo,1);advanceBounty(m,'parries',1,events);r.actions.parries++;
@@ -535,6 +564,6 @@ function invokeRune(m,i){
  if(rank>=7){r.forgeBoost=(r.forgeBoost||0)+30+(rank-7)*30;r.energy=100;r.hp=r.maxHp;events.push({type:'soulBurst'});}
  if(!events.length)events.push({type:'pickup',kind:'rune',x:.5,y:.8});return events;
 }
-const api={invokeRune,normalizeRun,swipe,collect,soulBurst,makeBounty,conditions,realms,enemyNames,realm,condition,waveTarget,cards,upgrades,milestones,fresh,normalize,accrue,claimIdle,idleRate,upgradeCost,buy,start,damage,drawCards,choose,reroll,spawn,attack,ability,step,claimMilestone};
+const api={power,powerLog,hitPower,ensureScale,healthCap,startingHealth,invokeRune,normalizeRun,swipe,collect,soulBurst,makeBounty,conditions,realms,enemyNames,realm,condition,waveTarget,cards,upgrades,milestones,fresh,normalize,accrue,claimIdle,idleRate,upgradeCost,buy,start,damage,drawCards,choose,reroll,spawn,attack,ability,step,claimMilestone};
 if(typeof module!=='undefined')module.exports=api;root.Slime=api;
 })(globalThis);

@@ -1,91 +1,82 @@
-# Slimefall · Eternal Expedition v5.1.0
+# Slimefall · Growing Worlds v6.0
 
-A portrait, offline-capable slime wave game. No build tools, accounts, subscriptions or external runtime dependencies.
+A cleaner mobile interface, an expanding hex skill tree, repeatable goals and progression beyond the old upgrade caps.
 
-## Upload from your phone
+## Update from your phone
 
-1. Export your current save from Settings first as a backup.
-2. Extract this ZIP. Upload **all files together** into the same GitHub repository directory that currently contains your game's `index.html`. Replace the old files. Every file belongs beside `index.html`; there are no asset folders.
-3. Let GitHub Pages finish publishing. Open the same website online once.
-4. Close every old game tab and installed game window, then reopen the game. An already-running older version can need this close/reopen cycle before it uses the new release.
-5. The header must read **ETERNAL EXPEDITION · v5.1**. Settings also shows v5.1.0. If it still says Soul Rush or Moonhaven, the new release is not loaded yet.
+1. Export your current save from Settings as a backup.
+2. Extract this ZIP and upload **all 28 files beside index.html**, replacing the old files in the same GitHub repository directory. There are no folders to upload.
+3. Wait for GitHub Pages to publish. Open the same website online once, close all older game windows/tabs and reopen it.
+4. Check for **GROWING WORLDS · v6.0** in the header, or v6.0.0 in Settings.
 
-Keep the same website address and game directory to keep its local save. Do not clear website storage or uninstall to force an update. Uploading this ZIP does not itself publish to GitHub; upload its extracted contents.
+Keep the same website path to retain the device save. Do not clear website storage to force an update. Older unused artwork may remain in your repository; the new game does not reference the old decorative frames.
 
-## Find the new features
+## A simpler screen
 
-- **Eternal expedition**, on the village screen: offline results, automatic card policy, offline on/off and retry controls.
-- **Moonforge & orders**, on the village screen: persistent merge board and commissions.
-- **Stardust research**, on the village screen: six research paths with no level cap.
-- **Open forge** and **Orders**, underneath the battlefield: work on the forge while combat keeps running. Opening it enables Auto. The saved Auto toggle in the header works from every screen. Toggle Auto OFF to restore manual evolution choices and stop offline wave progression.
+The new home uses original bright meadow artwork, plain rounded panels, clear labels and one large Play button for your saved wave. The five bottom destinations are **Home, Fight, Skills, Games, Shop**. There are no decorative blue frames.
 
-## One-click Auto (v5.1)
+- **Skills:** explore and grow the hex tree.
+- **Games:** Memory game, Fishing and Star puzzle.
+- **Shop:** battle upgrades, rune forge, research, rewards, powers, slime guide and offline results.
+- **Auto ON/OFF:** always available in the header. It remembers its setting and continues fighting while you explore the other screens and play mini-games.
 
-The **Auto ON/OFF** button is always available in the header, including the village and activity pages. It saves its preference and restores it after reload and on new runs. With no run yet, turning Auto ON starts one.
+A saved run remains at its original wave with its cards. Starting a new adventure is optional and still asks before replacing an active run.
 
-Auto handles attacks, swipes, counter/core openings, Frost nova, Overcharge, Soul Burst, every dropped coin/gem/time/rune orb and evolution choices. It keeps fighting while you visit the village, merge runes, fish, play the memory game or star map, inspect your build, research or buy permanent upgrades. Ordinary menus do not pause Auto. The explicit battle **Pause** menu pauses it until you resume.
+## Explore the skill tree
 
-A status bar shows the current wave from every screen. A defeat stops that run until you retry; it does not interrupt an activity or automatically spend your upgrade currencies. Tap the stopped status to reach upgrade/retry controls. Auto OFF stops hidden-screen fighting and disables offline waves. Your companion still attacks during a manually played battle, as before.
+Drag to move the map. Pinch or use +/− to zoom. Tap a hexagon to see its effect, then press **Unlock**. **Center** returns to the heart; **Next path** finds another available unlock.
 
-## Consistent large numbers (v5.1)
+Six connected branches begin at the slime heart:
 
-Wallets, costs, income rates, rewards, research resources, damage and damage popups use the same notation: **K, M, B, T, Qa, Qi, Sx, Sp, Oc, No, Dc**, followed by further thousand-fold suffixes. Examples: 1,000 → 1K, 12,300 → 12.3K, 1,000,000 → 1M, 10^15 → 1Qa. Rounded values promote to the next suffix rather than showing 1000K. Full numeric values are retained for all calculations and purchases.
-
-## Smart offline waves
-
-Tap **Auto ON** in the header. It enables both foreground Auto and offline waves. Leave the game with that run saved. On your next visit, it simulates the elapsed absence using the same combat engine: your cards, permanent upgrades, companion, real enemy types, movement, shields, poison, healing, boss mechanics and revivals.
-
-The pilot attacks every quarter-second, uses swipes and counter/core windows, catches all drop types every update and activates ready powers. It also collects the final kill’s drops before advancing the wave. It chooses evolutions according to **balanced**, **power** or **sustain**. It does not consume your forge runes or buy upgrades. Balanced heals when wounded and otherwise prefers damage and automatic skills. Results can differ from skilled manual play.
-
-Successful waves commit their coins, crystals, kills and forge rewards once. A defeated wave gives no partial loot: the simulation rolls that wave back, records the failure and stops there. It stays stopped across future visits until you press **Retry wave**. Upgrade first, then retry with a full ward. The wave and run cards are kept.
-
-The village **Eternal expedition** entry highlights a stopped wave. A saved manual defeat can also be retried at its original wave rather than restarting at wave 1.
-
-No offline-duration limit is imposed. Catch-up work is processed in small batches so long absences do not lock the UI in one synchronous computation. The return overlay shows progress. **Return to this wave now** ends further wave catch-up for that absence and hands you the current battle, keeping its partial progress and earned loot. Sanctuary income has already been credited in full.
-
-Offline play does not require a phone background process. Results are computed on return from the saved timestamp. If you close the game while catch-up is running, it saves the remaining work and partial simulated wave for the next visit.
-
-## Unlimited sanctuary income and sparks
-
-The old eight-hour income limit and 20,000-coin bank limit have both been removed. Sanctuary coins accumulate for the full elapsed time, even after an expedition loses. Collect them from the village. Forge sparks also accumulate for the full absence with no storage limit. Neither is a promise that waves can never defeat your build.
-
-## A second activity during combat
-
-The Moonforge has a twelve-slot persistent board. Conjure rank-1 runes using sparks. Tap a rune, then a matching rune to merge them; an empty tile moves the selected rune. Two of a rank make one of the next rank, up to rank 9. Fill-board and salvage controls help manage space.
-
-Sparks regenerate every 45 seconds before research bonuses, plus 2 for each cleared wave and 3 extra for a boss. Three guild orders ask for specific rune ranks. Deliver one to receive coins, stardust and, for higher ranks, crystals. Other unfinished orders remain unchanged. New commissions gradually ask for higher ranks. Orders continue after every landmark is restored.
-
-During combat you can consume a selected rune using **Invoke**:
-
-| Rank | Power |
+| Branch | What it changes |
 | --- | --- |
-| 1 | Refresh and cast Frost nova |
-| 2 | Heal 3 hearts |
-| 3 | Firestorm across the current swarm |
-| 4 | Fill Soul Burst energy |
-| 5 | 15 seconds of Overcharge and heal 3 |
-| 6 | Push enemies back, freeze and collapse the rift |
-| 7–9 | Double damage for 30/60/90 seconds, fill energy and heal |
+| Attack | Damage, with Solar flare strikes at keystones |
+| Spirit | Attack/helper speed and extra orb energy |
+| Health | Starting/live hearts, capacity and wave recovery |
+| Coins | Battle and sanctuary coin income |
+| Craft | Spark generation, orders and boss spark rewards |
+| Portals | Wormhole strength, duration and recharge |
 
-Choose between spending a rune in battle, delivering it or merging toward a higher discovery. Your board, orders, sparks, research and discoveries survive runs.
+The initial view contains 180 hexagons plus the heart. Buying paths reveals more hexagons beyond that branch's frontier. Each main path unlocks two optional side branches with up to three ranks. Every fifth main-path node is a special keystone. The atlas is generated as you grow; it is not a small tree you finish in one session.
 
-## Longer progression
+You receive **one skill point per ten best waves**. Existing progress counts: a save at wave 6009 with wave 6008 cleared begins with **600 points**, before any new task rewards. Points are earned from best-wave milestones once, so repeating the same waves does not repeatedly grant that milestone.
 
-Stardust now funds Astral edge, Sanctuary current, Moonstone ward, Ember well, Guild charter and Spirit resonance. Each can keep leveling; costs rise with level. Damage and income improvements apply immediately. Starting-ward improvements apply when starting a run or retrying a stopped offline wave. Dust comes from orders, salvage, boss victories and the existing village games.
+The little adventure on Home and the three goals at the top of Shop give another way to earn points. Defeat slimes, merge runes, deliver orders, fish, finish memory rounds or solve star puzzles. Claiming a completed goal gives **3 skill points**, coins and stardust, then rotates that goal. There is no daily reset or forced waiting period.
 
-Four new evolutions extend the previous 38-card pool:
+The tree, ranks, spending, point rewards and map camera are saved. Purchased paths affect real combat, Auto and offline simulations. Health ranks apply to a live run immediately; when bought after a stopped offline battle, they apply once on retry.
 
-- **Endless constellation**, wave 60+: multiplicative late-run damage with a much higher level ceiling.
-- **Celestial monsoon**, wave 60+: frequent multi-target star bombardments.
-- **Lunar oath**, wave 90+: recovery after each cleared wave.
-- **Eclipse hunger**, wave 100+: periodic maximum-health damage, reduced against bosses.
+## Progression after maxed upgrades
 
-The existing runeforge memory game, moonpool fishing, star-map puzzles, village restoration, seven-boss cycle, 29 sprite entries, realms, active powers, settings and save export/import remain available.
+Ancient blade, Companion bond and Gel sanctuary keep leveling past their old caps, with continuing effects and costs that grow after the former maximum. Spirit ward and Fate crystal retain their meaningful original ceilings.
 
-## Updates and save compatibility
+Three new run evolutions stay available after your original collection is complete:
 
-The old `slimefall-v1:` save key and path rules are preserved. Earlier Slimefall saves receive the new defaults without resetting their coins, waves, cards or village. An old save begins offline-wave tracking when v5 first loads; it does not unexpectedly simulate the time before this feature existed. Later absences are processed normally.
+- **Battle mastery:** +1% multiplicative damage per rank.
+- **Golden age:** +5% battle coins per rank.
+- **Spirit training:** +1% all damage and +1% companion damage per rank.
 
-The service worker installs the complete release before activating it and requests fresh release files. Updated v5 clients save and reload when a new worker takes control. Settings includes an update check. Phone installation/offline caching requires your HTTPS GitHub Pages website; opening a downloaded HTML file directly does not install a PWA.
+These have no ordinary level cap. The previous 42 powers, saved levels and discoveries are retained. Research, forge orders and the merge board remain available.
 
-See CHECKS.md for verification and remaining limits. The game uses your device's clock; it does not have server-side anti-cheat. Export backups periodically.
+## Large numbers without exponent notation
+
+K, M, B, T, Qa, Qi and the early thousand-fold suffixes remain. After Vg, the game continues with **aa, ab, ac …** rather than switching to scientific notation. The sequence continues for larger tiers. For example, a value written as `1.01e482` formats as **101fi** in this system.
+
+The HUD, wallets, prices, rewards and damage popups use the same formatter. The combat engine also scales enemy health and damage together at extreme magnitudes, so support beyond ordinary floating-point magnitudes is not merely a changed label. Saved scaled fights retain their wave, health ratios and card build. Display labels are rounded; calculations use the underlying values.
+
+## Saved Auto and offline adventure
+
+Auto handles attacks, swipes, counters/cores, ready powers, evolution choices and every dropped orb. Final-kill drops are collected before advancing. It keeps fighting on Home, in Skills, in normal menus and while you play the village games. The explicit battle Pause menu pauses Auto until resumed. Auto never buys permanent upgrades or spends your crafted runes for you.
+
+On defeat, the run stops until you upgrade/retry. A background defeat shows a stopped status without interrupting a mini-game. Tap it to open results and retry controls. Saved manual defeats can retry at their original wave with their cards.
+
+When you leave with offline waves enabled, the game simulates the full elapsed absence using the actual combat rules and your chosen evolution policy. Successful waves commit rewards once. A failed offline wave rolls back its partial loot and stops there; it does not repeatedly restart. Upgrade and retry with a full ward. Sanctuary coins and forge sparks continue accumulating for the full absence even after that defeat, with no elapsed-time or storage cap.
+
+Long catch-ups are processed in batches and can be interrupted with **Return to this wave now**. This ends further wave simulation for that absence and hands you the current battle, keeping partial progress and loot. Passive income has already been credited in full.
+
+## Save and installation notes
+
+The existing `slimefall-v1:` device-save key and path are preserved. Earlier saves gain defaults for the tree and activity counters. An old wave-6009 save was included in compatibility tests; no copy of your actual device save was available.
+
+GitHub Pages HTTPS is required for normal PWA installation and offline caching. Uploading the ZIP itself does not publish its contents. Load the complete release online once. The service worker caches the release before activation, and updated clients save before reloading. Settings has an update check and save export/import.
+
+See CHECKS.md for test coverage and its limits. No physical phone test was performed for this release.

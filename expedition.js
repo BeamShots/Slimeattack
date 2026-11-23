@@ -2,6 +2,7 @@
    Cleared waves commit once. Work is sliced; elapsed time is never capped. */
 (function(root){
 'use strict';
+const T=typeof module!=='undefined'?require('./tree.js'):root.SkillTree;
 const copy=o=>JSON.parse(JSON.stringify(o));
 function fresh(now=Date.now()){return {enabled:true,state:'ready',lastAt:now,carry:0,seed:734921,trial:null,blockedWave:0,wardLevel:0,style:'balanced',report:{from:0,to:0,cleared:0,coins:0,shards:0,kills:0,failed:0,seconds:0}};}
 function normalize(raw,now=Date.now()){
@@ -18,7 +19,7 @@ function normalize(raw,now=Date.now()){
 function rng(x){x.seed=(Math.imul(x.seed,1664525)+1013904223)>>>0;return x.seed/4294967296;}
 function pick(m,E,r){
  const healing=r.hp/r.maxHp<.55,style=m.expedition.style;
- const priority=['eternal','power','infinity','entropy','starfall','haste','familiar','chain','vortex','singularity','meteor','storm','blast','poison','venom','orbit','laser','crit','execute','fortune'];
+ const priority=['eternal','mastery','starlore','power','infinity','entropy','starfall','haste','familiar','chain','vortex','singularity','meteor','storm','blast','poison','venom','orbit','laser','crit','execute','fortune'];
  return r.offers.slice().sort((a,b)=>score(b)-score(a))[0];
  function score(id){
   if(['mend','vampire','phoenix','oath'].includes(id))return (healing?100:style==='sustain'?42:8)+(id==='mend'?r.maxHp-r.hp:0);
@@ -33,8 +34,9 @@ function pilot(m,E,dt,random=Math.random){
  const r=m.run,events=[];if(!r||r.phase!=='fight')return events;
  events.push(...collectDrops(m,E));
  r.pilotClock=(r.pilotClock||0)+dt;
- if(r.pilotClock>=.25){
-  r.pilotClock%=.25;
+ const interval=Math.max(.08,.25/(1+.03*T.stats(m).spirit));
+ if(r.pilotClock>=interval){
+  r.pilotClock%=interval;
   const e=r.enemies.slice().sort((a,b)=>b.y-a.y)[0];
   if(e){
    events.push(...E.ability(m,'frost'),...E.ability(m,'fury'));
@@ -54,7 +56,7 @@ function addElapsed(m,now=Date.now()){
 }
 function shadow(m,E){
  const x=m.expedition;
- if(!x.trial){x.wardLevel=m.upgrades.hull+m.forge.perks.ward;x.trial={run:copy(m.run),coins:0,shards:0,kills:0};}
+ if(!x.trial){x.wardLevel=m.upgrades.hull+m.forge.perks.ward+T.stats(m).health;x.trial={run:copy(m.run),coins:0,shards:0,kills:0};}
  const t=x.trial;
  if(!t.validated){
   try{t.run=E.normalizeRun(t.run,m);if(!['fight','draft'].includes(t.run.phase))throw Error('Invalid trial');}
@@ -88,15 +90,16 @@ function settle(m,E,F,budget=4000){
 function takeControl(m){
  const x=m.expedition;if(x.trial){commit(m,x.trial);x.trial=null;}x.carry=0;x.lastAt=Date.now();
 }
+function EarlyHealth(m){return 100+T.stats(m).health;}
 function retry(m,now=Date.now()){
  const x=m.expedition;if(x.state!=='blocked'||!m.run)return false;
- const ward=m.upgrades.hull+m.forge.perks.ward;
- m.run.maxHp=Math.min(100,Math.max(1,m.run.maxHp+ward-x.wardLevel));m.run.hp=m.run.maxHp;
+ const ward=m.upgrades.hull+m.forge.perks.ward+T.stats(m).health;
+ m.run.maxHp=Math.min(EarlyHealth(m),Math.max(1,m.run.maxHp+ward-x.wardLevel));m.run.hp=m.run.maxHp;
  x.wardLevel=ward;x.state='ready';x.trial=null;x.carry=0;x.blockedWave=0;x.report=fresh().report;x.lastAt=now;return true;
 }
 function retryFallen(m,E,now=Date.now()){
  const r=m.run;if(!r||r.phase!=='over')return false;
- r.phase='fight';r.maxHp=Math.min(100,Math.max(r.maxHp,5+m.upgrades.hull+m.forge.perks.ward));r.hp=r.maxHp;
+ r.phase='fight';r.maxHp=Math.min(EarlyHealth(m),Math.max(r.maxHp,5+m.upgrades.hull+m.forge.perks.ward+T.stats(m).health));r.hp=r.maxHp;
  r.enemies=[];r.spawned=0;r.resolved=0;r.target=E.waveTarget(r.wave);r.bonusSpawned=0;r.pickups=[];r.mines=[];r.offers=[];r.spawnClock=.7;r.revives=0;r.frostCD=0;r.furyCD=0;
  const enabled=m.expedition.enabled,style=m.expedition.style;m.expedition=fresh(now);m.expedition.enabled=enabled;m.expedition.style=style;return true;
 }

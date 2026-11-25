@@ -1,6 +1,6 @@
 /* Cache the whole release before activation. Never erase device saves. */
-const CACHE='slimefall-loot-v7.0.0';
-const FILES=['./','./index.html','./style.css','./engine.js','./app.js','./manifest.json','./enemies.webp','./icons.webp','./forest.webp','./icon192.png','./icon512.png','./enemies2.webp','./icons2.webp','./effects.webp','./biomes.webp','./enemies3.webp','./icons3.webp','./haven.js','./havenicons.webp','./meadow.webp','./gear.js','./gear.webp','./tree.js','./format.js','./forge.js','./expedition.js','./expedition-icons.webp'];
+const CACHE='slimefall-heroes-v8.0.0';
+const FILES=['./heroes.webp','./progression.js','./','./index.html','./style.css','./engine.js','./app.js','./manifest.json','./enemies.webp','./icons.webp','./forest.webp','./icon192.png','./icon512.png','./enemies2.webp','./icons2.webp','./effects.webp','./biomes.webp','./enemies3.webp','./icons3.webp','./haven.js','./havenicons.webp','./meadow.webp','./gear.js','./gear.webp','./tree.js','./format.js','./forge.js','./expedition.js','./expedition-icons.webp'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(url=>new Request(url,{cache:'reload'})))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{

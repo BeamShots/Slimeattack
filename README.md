@@ -1,81 +1,62 @@
-# Slimefall · Loot Legends v7.0
+# Slimefall · Slime Heroes v8.0
 
-This update focuses on the empty-battlefield bug, a scene-based Home screen, worthwhile late-wave idle income and equipment drops that are banked only after victory.
+Equipment, Talents and Your slime now follow a character-first mobile game layout. The Home scene and your existing progress stay in place.
 
-## Update from your phone
+## Upload from your phone
 
-1. Export your current save from Settings as a backup.
-2. Extract the ZIP and upload **all 30 files beside index.html**, replacing the previous files in the same GitHub repository directory. Everything is flat; no asset folders are required.
-3. Wait for GitHub Pages to finish publishing. Open the same game address online once, close older game windows/tabs and reopen.
-4. Open Settings and check for **Loot Legends · v7.0.0**.
+1. Export your save in Settings as a backup.
+2. Extract this ZIP. Upload **all 32 files together beside index.html**, replacing the old files in the same repository directory. There are no asset folders.
+3. Wait for GitHub Pages to publish. Open your usual game address online once, close older game tabs/app windows, then reopen.
+4. Check Settings for **Slime Heroes · v8.0.0**. Settings also has “Check for game update”.
 
-Keep the same website path to retain your existing save. Do not clear website storage to force an update. The ZIP itself is not a GitHub Pages deployment; upload its extracted contents.
+Use the same website path to keep your save. Do not clear website storage. Upload the extracted files, not the ZIP itself.
 
-## Home is a scene
+## The five bottom buttons
 
-Home now contains a compact resource HUD, one wave badge, four large shortcuts, one Play button and the bottom navigation. The slogan, big heading, text-card stack, duplicate wave line, secondary new-run button and long Auto status strip are gone from Home.
+- **Home:** your scene, Play, mini-games, idle chest and tasks.
+- **Fight:** your current battle or retry screen.
+- **Talents:** nine large talent buttons. Tap one, see the effect and price, then Learn.
+- **Gear:** your slime with five surrounding slots and an icon-based bag.
+- **Slime:** character level, attack, health and one large Upgrade slime button.
 
-- **Games:** Memory, Fishing and Star puzzle.
-- **Collect:** collect idle coins directly.
-- **Gear:** inspect and equip your items.
-- **Tasks:** view and claim little adventure goals.
+## Gear
 
-The bottom destinations are Home, Fight, Skills, Gear and Shop. The profile portrait also opens equipment. Detailed income information and the new-adventure action are in Settings. An ended adventure shows Retry instead of silently starting again.
+Tap a bag item to see its stats and Equip it. Tap an equipped slot to Upgrade that item with essence. Item options under More contain Change this item, Favorite, Unequip and Recycle. Individual recycling asks first; favorites and equipped items are protected.
 
-## Equipment waits until you beat the wave
+The collection uses four columns, rarity-colored backgrounds, level labels, equipped ticks and green arrows for items with a stronger raw-stat score. Arrows compare raw scores, not set combinations. Tap an empty slot to see that type of gear; Show all returns to the full bag. The bag opens on All when you return from another page.
 
-Slimes can drop swords, chest armor, helmets, rings and boots. A drop enters the current wave chest. It is **not** usable gear yet.
+The Forge button contains Equip strongest, Recycle spares and the duplicate-Common recycling setting. Recycling spare gear supplies essence. Bulk recycling protects equipped items, favorites and your strongest item per slot, and only recycles spare Common/Uncommon gear. Automatic recycling only processes inferior duplicate Common items of the same slot and set after victory.
 
-**When you clear the wave, every pending piece is collected automatically.** This works in manual play, Auto and offline waves. A failed wave discards its pending equipment. Previously banked gear remains safe. Closing the game halfway through a wave saves the pending chest; taking control after a partial offline simulation also keeps it pending until a later victory.
+Five slots remain: Sword (attack), Chest armor (health and armor), Helmet (health and luck), Ring (income and luck), Boots (speed and income). Three matching pieces activate the Woodland, Ember or Crystal set bonus, shown in the item popup. Armor reduces incoming damage, capped at 60% reduction. Item level displays drop tier plus purchased upgrade ranks; no existing stats were reduced.
 
-The battle HUD shows how many pieces are pending. Won gear appears in the inventory and updates its badge. You do not need to tap armor drops or press a claim button after winning.
+**Gear stays in the wave chest until you beat that wave, then collects automatically.** Manual, Auto and offline victories use the same rule. Failed-wave drops are discarded, while previously won equipment stays safe. A saved partial wave retains its pending chest.
 
-Base drop chances before equipment luck are 0.6% for normal slimes, 1.6% for elites and 40% for bosses. Boss drops have improved rarity odds. A first-item safeguard and a 180-kill dry-streak counter prevent a new inventory from staying empty indefinitely. Tier rises with the wave where the item drops.
+## Talents
 
-## Build your loadout
+The nine cards use your existing saved skill paths and point balance. Strength, Health, Companion, More coins, Rune magic and Wormhole buy the next connected rank in their branch. Sun strike, Recovery and Rift surge buy the remaining connected main-path lessons to the next keystone. The popup shows the complete price before spending. A failed or unaffordable purchase spends nothing.
 
-There are five slots and six rarities: Common, Uncommon, Rare, Epic, Legendary and Mythic.
+Your previously bought nodes still count. Talents continue growing as more points are earned. There is no forced drag or zoom. **Advanced map** opens the original six-branch map if you want to choose individual paths. Both views share the same purchases.
 
-| Slot | Main bonuses |
-| --- | --- |
-| Sword | Strength / attack damage |
-| Chest armor | Health and armor |
-| Helmet | Health and drop luck |
-| Ring | Income and drop luck |
-| Boots | Attack/helper speed and income |
+Earn one talent point per ten best waves, or use Earn points for repeatable tasks.
 
-Armor reduces actual incoming ward damage, up to 60% mitigation. Bonuses apply to battle, Auto and offline simulations where relevant. Income bonuses apply to both battle coins and the idle chest.
+## Upgrade your slime
 
-Three matching pieces activate a set bonus: Woodland grants +25% income, Ember +30% strength, Crystal +15% speed. Choose between individual item quality and a matching set.
+The large green button displays the coin price and next benefit. It purchases the original permanent strength, health or companion upgrade, choosing a lowest-level available category. Strength and companion continue beyond the ward's cap. Character level reflects the sum of those three existing upgrades plus one.
 
-Tap an item for details, Equip/Unequip, upgrades, favorites and recycling. **Equip strongest** chooses the highest raw-stat score in each slot; it does not optimize set combinations. Green arrows identify pieces with a higher raw score than the equipped item in that slot.
+Health purchased here applies once to a living run. If an offline wave is stopped or the run has ended, the displayed health previews the next retry without modifying the failed battle. Cards, current wave, gear and currencies are kept.
 
-Recycling supplies essence for equipment upgrades. Equipped pieces and favorites cannot be recycled. Recycle spares protects the strongest piece in each slot and only processes spare Common/Uncommon items. Inventory can be filtered, sorted and paged.
+Aqua, Leaf and Ember are cosmetic looks: they use the same stats and your choice is saved. The selected look appears on the equipment/character screens and as your battle companion. Upgrading plays the existing sound and a short character animation.
 
-**Auto-recycle duplicate Common** is ON by default. It only converts an inferior duplicate of the same slot and set, after the wave has been won. A first piece from another set is kept. Rare and higher items are never automatically recycled. You can turn this setting off in Gear.
+Battle upgrades, research, rune forge, mini-games, rewards, powers, tasks, the slime guide and offline results are accessible through **Slime → More**. Research and battle upgrades use icon tiles with details opened on tap. Forge tabs stay available while researching.
 
-Gear is not equipped or upgraded automatically: Auto banks drops, while you decide how to build the character. Equipment stats, upgrades, favorites, essence and pending-wave loot are saved.
+## Progress, Auto and offline play
 
-## Late-wave idle income
+The existing `slimefall-v1:` save key and site-path rules are unchanged. Older saves gain a default cosmetic selection, preserving waves, powers, equipment, talent nodes, upgrades and currencies.
 
-The idle chest now scales with best-wave progress in addition to sanctuary upgrades, research, skill-tree income and equipment bonuses. The progression multiplier is `1 + sqrt(best wave) / 3`. At best wave 12154, this is roughly **37.7 times** the old income calculation at the same upgrades, before new equipment income bonuses.
+Auto continues through normal pages, item/talent dialogs and mini-games. It collects dropped orbs, uses abilities, chooses cards and banks won equipment. Explicit Pause still pauses Auto. Gear choices, talent purchases and currency spending remain your decisions.
 
-It continues earning through the full absence even after the offline adventure loses. There is no elapsed-time or chest-storage cap. Idle coins and offline wave rewards are separate: successful offline waves deposit their own rewards directly, while the Collect chest stores passive income.
+Offline combat uses the existing simulation, stops on its first failed wave and waits for upgrade/retry. Passive coin income continues for the entire absence, including after an offline defeat; there is no time/storage limit. Late-wave income scaling, gear income bonuses and all older progression systems remain. Large values use K/M/B/T/Qa and continuing suffixes, including beyond ordinary floating-point combat magnitudes.
 
-## Combat rendering repair
+The long-wormhole rendering fix, visible-actor fallback, canvas sizing repair and short death images remain. All artwork and scripts ship locally; no CDN is needed. The service worker caches the complete new release before activation.
 
-Skill-tree portal bonuses can extend a wormhole beyond three seconds. The old drawing code assumed three seconds and could calculate negative ellipse radii, aborting drawing after the canvas had already been cleared. Its visual pulse now stays in a valid range for the full duration.
-
-The renderer resets transparency/blending each frame, uses an explicitly positioned canvas inside the arena, recovers dimensions, draws a companion fallback if art is unavailable and falls back to visible actors if an optional effect throws. The next animation callback is scheduled before drawing, so one effect cannot stop subsequent combat frames. Instant kills leave a brief death image and direct attacks have a short slash flash.
-
-## Features retained
-
-The expanding six-branch hex skill tree, wave milestone points, repeatable adventure goals, three continuing battle upgrades, 45 evolution cards, forge, research and village games remain. Auto keeps fighting through normal menus and mini-games, collects dropped orbs, casts powers and chooses evolutions. The explicit Pause menu pauses Auto.
-
-Offline waves still simulate actual combat, bank successful-wave rewards once and stop on first defeat until you upgrade/retry. They do not automatically spend your currencies or crafted runes. Long absences are processed in batches. Interrupting a catch-up hands over the partial battle and ends further wave simulation for that absence, while keeping already accrued passive income.
-
-Number suffixes continue beyond K/M/B/T/Qa through further named tiers and letter suffixes, without switching to exponent text. Extreme combat uses a shared numeric scale for health and damage.
-
-The existing `slimefall-v1:` save key and path rules are unchanged. Older saves receive an empty equipment inventory without resetting their wave, money, powers, skill tree or previous progress.
-
-See CHECKS.md for verification and its limits. No physical phone playtest was performed.
+See CHECKS.md for automated verification and its limits. No physical phone playtest was performed.

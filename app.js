@@ -1,6 +1,6 @@
 'use strict';
-const $=id=>document.getElementById(id), E=Slime, HV=Haven, F=Moonforge, X=Expedition, T=SkillTree, G=Equipment;
-let havenGame=null,lastRuneCue=-1;
+const $=id=>document.getElementById(id), E=Slime, HV=Haven, F=Moonforge, X=Expedition, T=SkillTree, G=Equipment, P=Progression;
+let havenGame=null,lastRuneCue=-1,liveDetail=null;
 const KEY='slimefall-v1:'+location.pathname.replace(/index\.html$/,'');
 let meta=E.fresh(),storageFailed=false;
 try{const saved=localStorage.getItem(KEY);if(saved)meta=E.normalize(JSON.parse(saved));}catch{storageFailed=true;}
@@ -9,9 +9,10 @@ let screen='home',page='',paused=true,toastTimer,bannerTimer,dirty=false,lastTim
 let heldPointer=null,forgeSelected=-1,forgeTab='board',pilotOn=meta.settings.auto,autoPaused=false,catchingUp=false,catchupGeneration=0;
 let lastPop=0,lastCrit=0,lastPower=0;
 let specialFx=[],deathEchoes=[],renderFailures=0;
-let gearFilter='all',gearSort='newest',gearPage=0,selectedGear=null,gearViewRevision=-1;
+let gearFilter='all',gearSort='rarity',gearPage=0,selectedGear=null,gearViewRevision=-1;
 let particles=[],texts=[],lines=[],rings=[],audio=null,installPrompt=null,previewCard=null;
 const canvas=$('battleCanvas'),ctx=canvas.getContext('2d');
+const heroArt=new Image();heroArt.src='./heroes.webp';
 const enemyArt=new Image();enemyArt.src='./enemies.webp';
 const enemyArt2=new Image();enemyArt2.src='./enemies2.webp';
 const effectArt=new Image();effectArt.src='./effects.webp';
@@ -64,10 +65,10 @@ function ambient(){
 }
 function vibrate(n){if(meta.settings.haptics&&navigator.vibrate)navigator.vibrate(n);}
 function dialog(title,content){
- heldPointer=null;paused=true;$('dialogTitle').textContent=title;$('dialogContent').replaceChildren(content);if(!$('dialog').open)$('dialog').showModal();
+ liveDetail=null;heldPointer=null;paused=true;$('dialogTitle').textContent=title;$('dialogContent').replaceChildren(content);if(!$('dialog').open)$('dialog').showModal();
 }
 function closeDialog(){
- autoPaused=false;
+ liveDetail=null;autoPaused=false;
  $('dialog').close();
  if(screen==='combat'&&meta.run?.phase==='fight')paused=false;
  if(meta.run?.phase==='over'&&screen==='combat')showHome();
@@ -75,7 +76,7 @@ function closeDialog(){
 $('closeDialog').onclick=()=>{sound('ui');closeDialog();};
 $('dialog').addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 function showScreen(name){
- $('mainNav').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.main===(name==='page'?(page==='tree'?'tree':page==='gear'?'gear':['village','runes','fishing','stars','tasks','expedition'].includes(page)?'home':'shop'):name)));
+ $('mainNav').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.main===(name==='page'?(['tree','talentmap'].includes(page)?'tree':page==='gear'?'gear':['village','runes','fishing','stars','tasks','expedition'].includes(page)?'home':'shop'):name)));
  screen=name;$('app').dataset.screen=name;heldPointer=null;
  if(name!=='combat')$('forgeDrawer').hidden=true;
  for(const id of ['home','combat','page'])$(id).classList.toggle('active',id===name);
@@ -123,11 +124,14 @@ $('claimIdle').onclick=()=>{
 document.querySelectorAll('[data-page]').forEach(n=>n.onclick=()=>{sound('ui');openPage(n.dataset.page);});
 $('back').onclick=showHome;
 function openPage(name){
- havenGame=null;lastRuneCue=-1;page=name;if(name==='gear'){meta.gear.unseen=0;selectedGear=null;save();}paused=true;showScreen('page');$('pageTitle').textContent={workshop:'Battle upgrades',collection:'Powers',milestones:'Rewards',bestiary:'Slime guide',village:'Mini-games',runes:'Memory game',fishing:'Fishing',stars:'Star puzzle',expedition:'Eternal expedition',forge:'Moonforge',research:'Research',tree:'Skill tree',shop:'Upgrades',gear:'Equipment',tasks:'Little adventures'}[name];renderPage();
+ havenGame=null;lastRuneCue=-1;page=name;if(name==='gear'){gearFilter='all';gearPage=0;meta.gear.unseen=0;selectedGear=null;save();}paused=true;showScreen('page');$('pageTitle').textContent={workshop:'Battle upgrades',collection:'Powers',milestones:'Rewards',bestiary:'Slime guide',village:'Mini-games',runes:'Memory game',fishing:'Fishing',stars:'Star puzzle',expedition:'Eternal expedition',forge:'Moonforge',research:'Research',tree:'Talents',talentmap:'Advanced map',shop:'Your slime',more:'More adventures',gear:'Equipment',tasks:'Little adventures'}[name];renderPage();
 }
 function renderPage(){
- const root=$('pageContent');root.classList.toggle('treePage',page==='tree');root.replaceChildren();
- if(page==='tree')return renderTree(root);
+ const root=$('pageContent');root.className='';root.classList.toggle('treePage',page==='talentmap');root.dataset.view=page;root.replaceChildren();
+ if(page==='talentmap')return renderTree(root);
+ if(page==='tree')return renderTalents(root);
+ if(page==='more')return renderMore(root);
+ if(page==='workshop')return renderUpgrades(root);
  if(page==='gear')return renderGear(root);
  if(page==='tasks')return renderJourneys(root);
  if(page==='shop')return renderShop(root);
@@ -135,17 +139,6 @@ function renderPage(){
  if(page==='forge')return renderForge(root);
  if(page==='research')return renderResearch(root);
  if(['village','runes','fishing','stars'].includes(page))return renderHavenPage();
- if(page==='workshop'){
-  root.append(el('p','notice','Permanent upgrades survive every run. Ward hearts apply when starting a new run. Other upgrades improve your current build too.'));
-  for(const [id,u]of Object.entries(E.upgrades)){
-   const panel=el('article','shopItem frame'),row=el('div','row'),copy=el('div','description'),level=meta.upgrades[id],cost=E.upgradeCost(meta,id);
-   copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+compact(level)+(u.max===Number.MAX_SAFE_INTEGER?' · KEEPS GROWING':' / '+u.max)),el('p','',u.desc));
-   const purchase=button(level>=u.max?'MAX LEVEL':compact(cost)+' '+(u.currency==='coins'?'coins':'crystals'),()=>{
-    E.accrue(meta);if(E.buy(meta,id)){sound('buy');vibrate(12);save();updateHome();renderPage();}
-   },level>=u.max||meta[u.currency]<cost,'primary');
-   purchase.dataset.buyUpgrade=id;row.append(icon(u.icon),copy);panel.append(row,purchase);root.append(panel);
-  }
- }
  if(page==='collection'){
   root.append(el('p','notice','Discover cards by choosing them after a wave. Combine elements to make a build that grows beyond your base damage.'));
   const grid=el('div','collectionGrid');
@@ -178,9 +171,12 @@ function enemyPortrait(type){
 }
 function updateHUD(){
  $('coins').textContent='● '+compact(meta.coins);$('shards').textContent='✦ '+compact(meta.shards);
- updateAutoControls();updateGearBadges();
- if(screen==='page'&&page==='tree')treeRefresh();
- if(screen==='page'&&page==='shop')refreshJourneys();
+ updateAutoControls();updateGearBadges();if($('dialog').open&&liveDetail)liveDetail();
+ if(screen==='page'&&page==='talentmap')treeRefresh();
+ if(screen==='page'&&page==='tree')refreshTalents();
+ if(screen==='page'&&page==='shop')refreshHero();
+ if(screen==='page'&&page==='gear'){const s=heroStats(),n=document.querySelector('.equipmentStage .heroStats');if(n){n.firstChild.textContent='⚔ '+s.attack;n.lastChild.textContent='♥ '+s.hp;}}
+ if(screen==='page'&&['more','tasks'].includes(page))refreshJourneys();
  if(screen==='page'&&page==='gear'&&gearViewRevision!==meta.gear.revision){const root=$('pageContent'),top=root.scrollTop;renderGear(root);root.scrollTop=top;updateGearBadges();}
  const r=meta.run;if(!r)return;
  $('pilotToggle').textContent='Auto · '+(pilotOn?'ON':'OFF');
@@ -403,7 +399,7 @@ function draw(dt){
  // Spirit companion stays at the ward and fires automatically.
  const petSize=47,px=width*.5,py=height-30+Math.sin(r.time*3)*3;
  ctx.fillStyle='#a3ffea22';ctx.beginPath();ctx.ellipse(px,py+10,29,8,0,0,Math.PI*2);ctx.fill();
- if(enemyArt.complete&&enemyArt.naturalWidth){const cw=enemyArt.naturalWidth/3,ch=enemyArt.naturalHeight/3;ctx.drawImage(enemyArt,0,ch*2,cw,ch,px-petSize/2,py-petSize/2,petSize,petSize);}else drawFallbackSlime(px,py,21,'#7bdfdf');
+ if(heroArt.complete&&heroArt.naturalWidth){const cw=heroArt.naturalWidth/3;ctx.drawImage(heroArt,meta.hero.skin*cw,0,cw,heroArt.naturalHeight,px-petSize/2,py-petSize/2,petSize,petSize);}else if(enemyArt.complete&&enemyArt.naturalWidth){const cw=enemyArt.naturalWidth/3,ch=enemyArt.naturalHeight/3;ctx.drawImage(enemyArt,0,ch*2,cw,ch,px-petSize/2,py-petSize/2,petSize,petSize);}else drawFallbackSlime(px,py,21,'#7bdfdf');
  for(const line of lines){
   line.life-=dt;ctx.globalAlpha=Math.max(0,line.life/line.max);ctx.strokeStyle=line.color||'#ffe5a5';ctx.lineWidth=line.color?1.7:2.5;ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=7;ctx.beginPath();
   const x=line.x*width,y=line.y*height,x2=line.x2*width,y2=line.y2*height;
@@ -518,7 +514,7 @@ function settings(){
   }));dialog('Reset this save?',confirm);
  }));
  if(storageFailed)menu.prepend(el('p','notice','Device saving is unavailable or a previous save could not be read. Export a backup to keep this session.'));
- menu.prepend(button('Start a new adventure',()=>$('play').click()),button('Idle earnings',showIdleRewards),button('Large number guide',()=>{const body=el('div','menuButtons');body.append(el('p','','K, M, B, T, Qa, Qi and the usual suffixes continue through Vg. After Vg, numbers use aa, ab, ac and onward. These letter suffixes keep growing; the game does not switch to scientific notation.'),button('Back',settings));dialog('Big numbers, simple labels',body);}),el('p','notice','Loot Legends · v7.0.0 · Victory-banked equipment'),button('Check for game update',checkUpdate));
+ menu.prepend(button('Start a new adventure',()=>$('play').click()),button('Idle earnings',showIdleRewards),button('Large number guide',()=>{const body=el('div','menuButtons');body.append(el('p','','K, M, B, T, Qa, Qi and the usual suffixes continue through Vg. After Vg, numbers use aa, ab, ac and onward. These letter suffixes keep growing; the game does not switch to scientific notation.'),button('Back',settings));dialog('Big numbers, simple labels',body);}),el('p','notice','Slime Heroes · v8.0.0 · Gear collected after victory'),button('Check for game update',checkUpdate));
  dialog('Settings',menu);
 }
 $('settings').onclick=()=>{sound('ui');settings();};
@@ -747,7 +743,7 @@ function renderExpedition(root){
 function renderForge(root){
  root.replaceChildren();const f=meta.forge,inBattle=screen==='combat';
  const tabs=el('div','forgeTabs');for(const [id,label]of [['board','Merge runes'],['orders','Guild orders'],['research','Research']])tabs.append(button(label,()=>{forgeTab=id;forgeSelected=-1;renderForge(root);},false,forgeTab===id?'selected':''));root.append(tabs);
- if(forgeTab==='research')return renderResearch(root);
+ if(forgeTab==='research'){const content=el('div','researchContent');root.append(content);return renderResearch(content);}
  const line=el('div','forgeWallet');line.append(expIcon(1),el('span','forgeBalance',compact(f.sparks)+' sparks · ✧ '+compact(meta.haven.dust)+' dust'));root.append(line);
  if(forgeTab==='orders'){
   root.append(el('p','notice','Merge the requested rank, then deliver it. Orders grow into rarer runes as your guild reputation rises. Orders '+compact(f.orders)+' · Highest rune '+F.names[f.discovered]));
@@ -780,14 +776,6 @@ function renderForge(root){
 }
 function runeIcon(rank){const n=expIcon(rank<=1?2:rank<=2?3:rank<=3?4:rank<=4?5:6);n.classList.add('runeArt','rank'+rank);return n;}
 function runeEffectName(rank){return rank===1?'refresh Frost':rank===2?'heal 3':rank===3?'firestorm':rank===4?'Soul Burst':rank===5?'royal fury':rank===6?'rift collapse':'ascendant power';}
-function renderResearch(root){
- root.append(el('p','notice','✧ '+compact(meta.haven.dust)+' stardust · Research has no level cap. Costs grow with each level. Earn dust from orders, salvaged runes, boss victories and village activities. Ward upgrades apply on a new run or offline retry.'));
- for(const [id,u]of Object.entries(F.perks)){
-  const panel=el('article','shopItem frame'),row=el('div','row'),copy=el('div','description'),cost=F.cost(meta,id);
-  copy.append(el('h3','',u.name),el('div','levelTag','LEVEL '+compact(meta.forge.perks[id])),el('p','',u.desc));row.append(expIcon(u.icon),copy);
-  panel.append(row,button('Research · '+compact(cost)+' dust',()=>{F.accrue(meta);E.accrue(meta);if(F.buy(meta,id)){sound('buy');save();updateHome();if(root.id==='drawerContent'||(screen==='page'&&page==='forge'))renderForge(root);else{root.replaceChildren();renderResearch(root);}updateHUD();}},meta.haven.dust<cost,'primary'));panel.lastElementChild.dataset.buyResearch=id;root.append(panel);
- }
-}
 function finishCatchup(){
  catchingUp=false;catchupGeneration++;$('catchup').hidden=true;X.takeControl(meta);showHome();save();
  if(meta.expedition.report.failed)notify('Expedition stopped at wave '+meta.expedition.report.failed+'. Open the expedition to upgrade and retry.');
@@ -851,10 +839,9 @@ document.querySelectorAll('[data-main]').forEach(b=>b.onclick=()=>{
  sound('ui');const name=b.dataset.main;
  if(name==='home')showHome();else if(name==='combat'){if(meta.run&&meta.run.phase!=='over')resumeRun();else if(meta.run?.phase==='over')openPage('expedition');else begin();}else openPage(name);
 });
-function renderShop(root){
- renderJourneys(root);
- const items=[['gear','Equipment','Equip, compare and upgrade your drops.','▣'],['village','Mini-games','Play while Auto fights.','✿'],['tree','Skills','Choose a path and keep growing.','⬡'],['workshop','Battle upgrades','Spend coins to strengthen your adventure.','⚔'],['forge','Rune forge','Merge runes and fill guild orders.','✧'],['research','Research','Turn stardust into lasting boosts.','✦'],['milestones','Rewards','Claim your milestones.','★'],['collection','Your powers','See the powers you have found.','▣'],['bestiary','Slime guide','Meet the slimes and bosses.','●'],['expedition','Offline adventure','See results, upgrade and retry.','↗']];
- for(const [page,title,copy,symbol]of items){const card=button('',()=>openPage(page),false,'simpleMenuCard');card.append(el('span','menuSymbol',symbol),el('span','menuCopy'));card.lastChild.append(el('b','',title),el('small','',copy));card.append(el('span','','→'));root.append(card);}
+function renderMore(root){
+ const items=[['gear','Equipment',()=>gearIcon(1)],['village','Mini-games',()=>havenIcon(3)],['tree','Talents',()=>icon(8)],['workshop','Battle upgrades',()=>icon(0)],['forge','Rune forge',()=>expIcon(3)],['research','Research',()=>expIcon(1)],['milestones','Rewards',()=>icon(15)],['collection','Powers',()=>icon(33)],['bestiary','Slime guide',()=>enemyPortrait(0)],['expedition','Offline waves',()=>expIcon(0)],['tasks','Tasks',()=>icon(28)]];
+ const grid=el('div','moreGrid');for(const [name,title,art]of items){const card=button('',()=>openPage(name),false,'simpleMenuCard');card.append(art(),el('b','',title));grid.append(card);}root.append(grid);
 }
 function renderHomeGoal(){
  const root=$('homeGoal');if(!root)return;root.replaceChildren();
@@ -870,7 +857,7 @@ function renderJourneys(root){
 }
 function refreshJourneys(){for(const row of document.querySelectorAll('[data-task-slot]')){const t=T.task(meta,+row.dataset.taskSlot),b=row.querySelector('button');row.querySelector('small').textContent=t.progress+'/'+t.goal+' · +3 points';b.textContent=t.progress>=t.goal?'Claim':'Go';b.classList.toggle('primary',t.progress>=t.goal);}}
 let selectedTreeNode='0:1:0',treeResize=()=>{},treeRefresh=()=>{};
-window.addEventListener('resize',()=>{if(screen==='page'&&page==='tree')treeResize();});
+window.addEventListener('resize',()=>{if(screen==='page'&&page==='talentmap')treeResize();});
 function renderTree(root){
  const wallet=el('div','treeWallet');wallet.append(el('div','',compact(T.available(meta))+' skill points'),el('small','','1 point per 10 best waves · More from little adventures'));
  const tools=el('div','treeToolbar');for(const [label,fn]of [['−',()=>zoom(.8)],['+',()=>zoom(1.25)],['Center',()=>{camera.x=0;camera.y=0;camera.zoom=.55;apply();}],['Next path',focusNext]])tools.append(button(label,fn,false));
@@ -932,21 +919,96 @@ function updateGearBadges(){
 }
 function showIdleRewards(){E.accrue(meta);const body=el('div','menuButtons');body.append(el('div','idleBig',compact(meta.idle.bank)+' coins'),el('p','',compact(E.idleRate(meta)*60)+' per minute · keeps earning while you are away'),button('Collect',()=>{$('claimIdle').click();closeDialog();},meta.idle.bank<1,'primary'),button('Offline wave results',()=>{$('dialog').close();openPage('expedition');}));dialog('Your idle chest',body);}
 function gearStatText(s){const labels={strength:'Strength',health:'Health',armor:'Armor',income:'Income',speed:'Speed',luck:'Drop luck'};return Object.entries(labels).filter(([k])=>s[k]>0).map(([k,label])=>label+' +'+(s[k]<1000?Number(s[k].toFixed(1)):compact(s[k]))+(['health','armor'].includes(k)?'':'%')).join(' · ');}
+
+/* v8: the first view has one clear job; details open on a tap. */
+function heroPortrait(skin=meta.hero.skin){const n=el('span','heroPortrait');n.dataset.skin=skin;n.style.backgroundPosition=(skin*50)+'% center';n.setAttribute('role','img');n.setAttribute('aria-label',['Aqua slime hero','Leaf slime hero','Ember slime hero'][skin]);return n;}
+function heroStats(){const r=meta.run||E.previewRun(meta);return {attack:compact(E.power(meta,r)),hp:compact(P.previewHealth(meta,E))};}
+function statStrip(){const s=heroStats(),n=el('div','heroStats');n.append(el('span','','⚔ '+s.attack),el('span','','♥ '+s.hp));n.setAttribute('aria-label','Attack '+s.attack+', Health '+s.hp);return n;}
+function playFromPage(){if(meta.run?.phase==='over'||meta.expedition.state==='blocked')openPage('expedition');else if(meta.run)resumeRun();else begin();}
+function renderShop(root){
+ root.replaceChildren();root.className='heroPage';
+ const stage=el('div','upgradeStage'),copy=el('div','heroHeading');copy.append(el('h2','',['Aqua','Leaf','Ember'][meta.hero.skin]),el('b','heroLevel','Lv. '+compact(P.heroLevel(meta))));stage.append(copy,heroPortrait(),el('div','heroPedestal'),statStrip());
+ const upgrade=button('',()=>{E.accrue(meta);if(P.upgradeHero(meta,E)){sound('buy');vibrate(18);save();renderShop(root);root.querySelector('.upgradeStage').classList.add('leveledUp');updateHUD();}},false,'greenButton heroUpgrade');upgrade.id='heroUpgrade';
+ const choices=el('div','heroChoices');for(let i=0;i<3;i++){const n=button('',()=>{meta.hero.skin=i;save();renderShop(root);},false,'heroChoice'+(i===meta.hero.skin?' selected':''));n.append(heroPortrait(i));n.setAttribute('aria-label','Choose '+['Aqua','Leaf','Ember'][i]+' look');n.setAttribute('aria-pressed',String(i===meta.hero.skin));choices.append(n);}
+ const actions=el('div','heroLinks');actions.append(button('⚔  Battle upgrades',()=>openPage('workshop')),button('▦  More',()=>openPage('more')));
+ root.append(stage,upgrade,choices,el('p','quietHint',meta.expedition.state==='blocked'||meta.run?.phase==='over'?'Health shown is ready for your next retry':'Choose a look · All your upgrades stay'),actions);refreshHero();
+}
+function refreshHero(){
+ const b=$('heroUpgrade');if(!b)return;const next=P.heroNext(meta,E);b.disabled=!next?.ready;
+ b.replaceChildren(el('b','',next?'Upgrade slime':'Fully upgraded'),el('small','',next?'● '+compact(next.cost)+'  ·  '+next.benefit:''));
+ const stats=document.querySelector('.upgradeStage .heroStats');if(stats){const s=heroStats();stats.firstChild.textContent='⚔ '+s.attack;stats.lastChild.textContent='♥ '+s.hp;}
+}
+function renderTalents(root){
+ root.replaceChildren();root.className='talentsPage';
+ const wallet=el('div','talentWallet');wallet.append(el('b','','✦ '+compact(T.available(meta))),el('span','','Talent points'));
+ const grid=el('div','talentGrid');
+ for(const def of P.talents){const b=button('',()=>showTalent(def.id),false,'talentCard'+(def.cap?' specialTalent':''));b.dataset.talent=def.id;const hex=el('span','talentHex');hex.append(icon(def.icon));b.append(hex,el('b','',def.name),el('small','talentLevel'),el('span','talentPrice'));b.setAttribute('aria-label',def.name+' talent');grid.append(b);}
+ const links=el('div','talentLinks');links.append(button('Earn points',()=>openPage('tasks'),false,'primary'),button('Advanced map',()=>openPage('talentmap')));
+ root.append(wallet,el('p','talentIntro','Tap a talent to make your slime stronger'),grid,links,el('p','quietHint','1 point every 10 best waves · Talents keep growing'));refreshTalents();
+}
+function refreshTalents(){
+ const wallet=document.querySelector('.talentWallet b');if(wallet)wallet.textContent='✦ '+compact(T.available(meta));
+ for(const b of document.querySelectorAll('[data-talent]')){const l=P.lesson(meta,b.dataset.talent);b.querySelector('.talentLevel').textContent='Lv. '+compact(l.level);b.querySelector('.talentPrice').textContent=Number.isFinite(l.cost)?'✦ '+compact(l.cost):'Complete';b.classList.toggle('canLearn',l.ready);}
+}
+function showTalent(id){
+ const l=P.lesson(meta,id);if(!l)return;const body=el('div','itemPopup talentPopup'),badge=el('div','popupBadge');badge.append(icon(l.icon));
+ const desc=el('p','popupBenefit',l.benefit),bundle=el('p','quietHint',l.ids.length>1?'Includes '+l.ids.length+' connected path lessons':''),buy=button('',()=>{E.accrue(meta);if(P.learn(meta,id)){sound('buy');vibrate(16);save();refreshTalents();showTalent(id);updateHUD();}},false,'greenButton');buy.dataset.learnTalent=id;
+ body.append(badge,el('b','popupLevel','Lv. '+compact(l.level)),desc,bundle,buy);dialog(l.name,body);
+ liveDetail=()=>{const next=P.lesson(meta,id);buy.disabled=!next.ready;buy.textContent=(next.ready?'Learn · ✦ ':'Need ✦ ')+compact(next.cost);};liveDetail();
+}
+function gearTitle(i){return G.sets[i.set].name+' '+G.slotNames[i.slot];}
+function itemLevel(i){return i.tier+i.level;}
+function itemCard(i,action,extra=''){
+ const n=button('',action,false,'gearCard rarity'+i.rarity+' '+extra);n.append(gearIcon(i),el('b','gearLevel','Lv. '+compact(itemLevel(i))));n.setAttribute('aria-label',G.rarities[i.rarity].name+' '+gearTitle(i)+', level '+compact(itemLevel(i)));return n;
+}
 function renderGear(root){
- root.replaceChildren();const g=meta.gear,stats=G.stats(meta);g.unseen=0;gearViewRevision=g.revision;const header=el('div','gearSummary');header.append(el('b','',gearStatText(stats)||'Find your first piece of gear'),el('small','',''+compact(g.scrap)+' essence · '+g.items.length+' items'));root.append(header);
- const loadout=el('div','loadout');for(const slot of G.slots){const i=g.items.find(i=>i.id===g.equipped[slot]),n=button('',()=>{gearFilter=slot;gearPage=0;selectedGear=i?.id??null;renderGear(root);},false,'loadoutSlot'+(i?' rarity'+i.rarity:''));n.append(gearIcon(i||G.slots.indexOf(slot)),el('small','',G.slotNames[slot]),el('b','',i?'T'+i.tier+' +'+i.level:'Empty'));loadout.append(n);}root.append(loadout);
- const controls=el('div','gearActions');controls.append(button('Equip strongest',()=>{E.accrue(meta);G.equipBest(meta);sound('buy');save();renderGear(root);updateHUD();},!g.items.length,'primary'),button('Recycle spares',()=>{
-  const body=el('div','menuButtons');body.append(el('p','','Recycle spare Common and Uncommon gear into upgrade essence? Equipped items, favorites and the strongest item in each slot are protected.'),button('Recycle spares',()=>{const count=G.recycleExtras(meta);save();closeDialog();renderGear(root);notify(count+' items recycled');},false,'primary'),button('Keep my gear',closeDialog));dialog('Recycle spare gear?',body);
- },!g.items.length));root.append(controls);
- const filters=el('div','gearFilters');for(const slot of ['all',...G.slots])filters.append(button(slot==='all'?'All':G.slotNames[slot],()=>{gearFilter=slot;gearPage=0;selectedGear=null;renderGear(root);},false,gearFilter===slot?'selected':''));root.append(filters);
- const sortRow=el('div','gearSort');sortRow.append(button('Sort · '+gearSort,()=>{const options=['newest','strongest','rarity'];gearSort=options[(options.indexOf(gearSort)+1)%3];gearPage=0;renderGear(root);}),button('Recycle duplicate Common · '+(g.autoRecycle?'ON':'OFF'),()=>{g.autoRecycle=!g.autoRecycle;save();renderGear(root);}));root.append(sortRow);
- const equippedScores=Object.fromEntries(G.slots.map(slot=>{const i=g.items.find(i=>i.id===g.equipped[slot]);return [slot,i?G.score(i):0];}));
- const selected=g.items.find(i=>i.id===selectedGear);if(selected){const panel=el('article','gearDetail rarity'+selected.rarity),equipped=g.equipped[selected.slot]===selected.id;panel.append(gearIcon(selected),el('h3','',G.rarities[selected.rarity].name+' '+G.slotNames[selected.slot]),el('p','',G.sets[selected.set].name+' · Tier '+selected.tier+' · Upgrade +'+selected.level),el('p','',gearStatText(G.statsFor(selected))),el('small','',G.sets[selected.set].desc+' · '+Math.min(3,stats.sets[selected.set])+'/3 equipped'));
-  const actions=el('div','gearActions');actions.append(button(equipped?'Unequip':'Equip',()=>{E.accrue(meta);if(equipped)G.unequip(meta,selected.slot);else G.equip(meta,selected.id);sound('buy');save();renderGear(root);updateHUD();},false,'primary'),button('Upgrade · '+compact(G.cost(selected))+' essence',()=>{E.accrue(meta);if(G.upgrade(meta,selected.id)){sound('buy');save();renderGear(root);updateHUD();}},g.scrap<G.cost(selected)),button(selected.favorite?'★ Favorite':'☆ Favorite',()=>{G.favorite(meta,selected.id);save();renderGear(root);}),button('Recycle · +'+G.recycleValue(selected),()=>{if(G.recycle(meta,selected.id)){selectedGear=null;sound('coin');save();renderGear(root);}},selected.favorite||equipped));panel.append(actions);root.append(panel);
+ root.replaceChildren();root.className='equipmentPage';const g=meta.gear;g.unseen=0;gearViewRevision=g.revision;
+ const stage=el('div','equipmentStage');stage.append(heroPortrait(),el('div','heroPedestal'));
+ for(const slot of G.slots){const i=g.items.find(i=>i.id===g.equipped[slot]),n=i?itemCard(i,()=>showGearItem(i.id),'equippedSlot slot-'+slot):button('',()=>{gearFilter=slot;gearPage=0;renderGear(root);root.querySelector('.bagSection').scrollIntoView?.({block:'nearest'});},false,'emptySlot slot-'+slot);
+  n.classList.add('equippedSlot');if(!i){n.append(gearIcon(G.slots.indexOf(slot)),el('span','emptyPlus','+'));n.setAttribute('aria-label','Empty '+G.slotNames[slot]+' slot. View '+G.slotNames[slot]+' bag.');}
+  const label=el('small','slotLabel',G.slotNames[slot]);n.append(label);stage.append(n);
  }
- const items=g.items.filter(i=>gearFilter==='all'||i.slot===gearFilter).sort((a,b)=>gearSort==='newest'?b.id-a.id:gearSort==='strongest'?G.score(b)-G.score(a):b.rarity-a.rarity||G.score(b)-G.score(a)),pages=Math.max(1,Math.ceil(items.length/48));gearPage=Math.min(gearPage,pages-1);
- const grid=el('div','gearGrid');for(const i of items.slice(gearPage*48,gearPage*48+48)){const n=button('',()=>{selectedGear=i.id;renderGear(root);root.scrollTop=0;},false,'gearCard rarity'+i.rarity+(g.equipped[i.slot]===i.id?' equipped':''));n.append(gearIcon(i),el('small','',G.rarities[i.rarity].name),el('b','',G.slotNames[i.slot]),el('small','', 'T'+i.tier+' · +'+i.level+(i.favorite?' ★':'')));if(g.equipped[i.slot]!==i.id&&G.score(i)>equippedScores[i.slot])n.append(el('span','gearBetter','↑'));n.setAttribute('aria-label',G.rarities[i.rarity].name+' '+G.slotNames[i.slot]+', tier '+i.tier);grid.append(n);}root.append(grid);
- if(!items.length)root.append(el('p','gearEmpty','Gear drops stay in the wave chest until you win. Defeat slimes and bosses to find equipment.'));
- if(pages>1){const pager=el('div','gearActions');pager.append(button('← Previous',()=>{gearPage--;renderGear(root);},gearPage===0),el('span','',gearPage+1+' / '+pages),button('Next →',()=>{gearPage++;renderGear(root);},gearPage===pages-1));root.append(pager);}
- root.append(el('p','gearHint','Gear is collected automatically after a victory. Duplicate Common items of the same set may turn into essence when auto-recycle is on. Favorites and equipped gear are protected from recycling.'));
+ const heroLink=button('Upgrade slime ↑',()=>openPage('shop'),false,'smallGreen');heroLink.classList.add('stageUpgrade');stage.append(heroLink);stage.append(statStrip());root.append(stage);
+ const bag=el('section','bagSection'),heading=el('div','bagHeading');heading.append(button('By '+gearSort,()=>{const options=['rarity','strongest','newest'];gearSort=options[(options.indexOf(gearSort)+1)%options.length];gearPage=0;renderGear(root);}));heading.append(el('h3','','My Collection'),button('Forge',showGearForge));bag.append(heading);
+ if(gearFilter!=='all'){const filter=button(G.slotNames[gearFilter]+'  ×  Show all',()=>{gearFilter='all';gearPage=0;renderGear(root);},false,'bagFilter');bag.append(filter);}
+ const equippedScores=Object.fromEntries(G.slots.map(slot=>{const i=g.items.find(i=>i.id===g.equipped[slot]);return [slot,i?G.score(i):0];}));
+ const items=g.items.filter(i=>gearFilter==='all'||i.slot===gearFilter).sort((a,b)=>gearSort==='newest'?b.id-a.id:gearSort==='strongest'?G.score(b)-G.score(a):b.rarity-a.rarity||G.score(b)-G.score(a)),pages=Math.max(1,Math.ceil(items.length/48));gearPage=Math.max(0,Math.min(gearPage,pages-1));
+ const grid=el('div','gearGrid');for(const i of items.slice(gearPage*48,gearPage*48+48)){const equipped=g.equipped[i.slot]===i.id,n=itemCard(i,()=>showGearItem(i.id),equipped?'equipped':'');if(equipped)n.append(el('span','equippedTick','✓'));if(i.favorite)n.append(el('span','favoriteMark','★'));if(!equipped&&G.score(i)>equippedScores[i.slot])n.append(el('span','gearBetter','↑'));grid.append(n);}bag.append(grid);
+ if(!items.length){const empty=el('div','bagEmpty');empty.append(gearIcon(1),el('b','','Win waves to find '+(gearFilter==='all'?'gear':G.slotNames[gearFilter].toLowerCase())),el('p','','Drops are collected when you win'),button('Play',playFromPage,false,'greenButton'));bag.append(empty);}
+ if(pages>1){const pager=el('div','bagPager');pager.append(button('←',()=>{gearPage--;renderGear(root);},gearPage===0),el('b','',gearPage+1+' / '+pages),button('→',()=>{gearPage++;renderGear(root);},gearPage===pages-1));bag.append(pager);}root.append(bag);
+}
+function showGearItem(id){
+ const i=meta.gear.items.find(i=>i.id===id);if(!i){closeDialog();return;}selectedGear=id;
+ const equipped=meta.gear.equipped[i.slot]===id,body=el('div','itemPopup'),badge=el('div','popupBadge rarity'+i.rarity);badge.append(gearIcon(i));body.append(badge,el('b','popupLevel',G.rarities[i.rarity].name+' · Lv. '+compact(itemLevel(i))));
+ const stats=G.statsFor(i),list=el('div','itemStats');for(const [key,label]of Object.entries({strength:'Attack',health:'Health',armor:'Armor',income:'Coins',speed:'Speed',luck:'Drop luck'}))if(stats[key]){const row=el('div');row.append(el('span','',label),el('b','','+'+compact(Number(stats[key].toFixed(1)))+(['health','armor'].includes(key)?'':'%')));list.append(row);}body.append(list,el('p','quietHint',G.sets[i.set].desc+' · '+Math.min(3,G.stats(meta).sets[i.set])+'/3 equipped'));
+ const current=meta.gear.items.find(j=>j.id===meta.gear.equipped[i.slot]);if(!equipped&&current){const d=G.score(i)-G.score(current);body.append(el('p','compareHint',d>0?'↑ Stronger than your equipped item':d===0?'Same power as your equipped item':'Your equipped item is stronger'));}
+ const action=button('',()=>{E.accrue(meta);if(equipped?G.upgrade(meta,id):G.equip(meta,id)){sound('buy');save();renderGear($('pageContent'));showGearItem(id);updateHUD();}},false,'greenButton');action.dataset.gearAction=equipped?'upgrade':'equip';body.append(action,button('More',()=>showGearOptions(id),false,'textButton'));
+ dialog(gearTitle(i),body);liveDetail=()=>{const item=meta.gear.items.find(j=>j.id===id);if(!item){action.disabled=true;return;}action.textContent=equipped?'Upgrade · '+compact(G.cost(item))+' essence':'Equip';action.disabled=equipped&&meta.gear.scrap<G.cost(item);};liveDetail();
+}
+function showGearOptions(id){
+ const i=meta.gear.items.find(j=>j.id===id);if(!i)return;const equipped=meta.gear.equipped[i.slot]===id,body=el('div','menuButtons');
+ body.append(button(i.favorite?'★ Remove favorite':'☆ Keep as favorite',()=>{G.favorite(meta,id);save();renderGear($('pageContent'));showGearItem(id);}));
+ if(equipped)body.append(button('Change this item',()=>{gearFilter=i.slot;gearPage=0;closeDialog();renderGear($('pageContent'));$('pageContent').querySelector('.bagSection').scrollIntoView?.({block:'nearest'});}));
+ if(equipped)body.append(button('Unequip',()=>{E.accrue(meta);G.unequip(meta,i.slot);save();renderGear($('pageContent'));showGearItem(id);updateHUD();}));
+ body.append(button('Recycle · +'+compact(G.recycleValue(i))+' essence',()=>{const confirm=el('div','menuButtons');confirm.append(el('p','','Recycle '+gearTitle(i)+'? This item will be gone.'),button('Recycle item',()=>{if(G.recycle(meta,id)){sound('coin');save();renderGear($('pageContent'));closeDialog();}},false,'primary'),button('Keep item',()=>showGearItem(id)));dialog('Recycle this item?',confirm);},equipped||i.favorite),button('Back',()=>showGearItem(id)));dialog('Item options',body);
+}
+function showGearForge(){
+ const g=meta.gear,body=el('div','menuButtons');body.append(el('div','forgeEssence','✧ '+compact(g.scrap)+' essence'),button('Equip strongest',()=>{E.accrue(meta);G.equipBest(meta);sound('buy');save();renderGear($('pageContent'));closeDialog();updateHUD();},!g.items.length,'greenButton'),button('Recycle spares',()=>{const b=el('div','menuButtons');b.append(el('p','','Recycle spare Common and Uncommon gear? Equipped gear, favorites and your strongest items are kept.'),button('Recycle spares',()=>{const count=G.recycleExtras(meta);save();renderGear($('pageContent'));showGearForge();notify(count+' items recycled');},false,'primary'),button('Keep my gear',showGearForge));dialog('Recycle spares?',b);},!g.items.length),button('Recycle duplicate Common · '+(g.autoRecycle?'ON':'OFF'),()=>{g.autoRecycle=!g.autoRecycle;save();showGearForge();}),el('p','quietHint','Recycle spares for essence. Tap equipped gear to upgrade it.'));dialog('Gear forge',body);
+}
+function renderUpgrades(root){
+ root.replaceChildren();root.className='simpleUpgradePage';root.append(el('p','talentIntro','Choose what to make stronger'));
+ const grid=el('div','upgradeGrid');for(const [id,u]of Object.entries(E.upgrades)){const n=button('',()=>showUpgrade(id),false,'upgradeTile');n.append(icon(u.icon),el('b','',u.name),el('small','','Lv. '+compact(meta.upgrades[id])));grid.append(n);}root.append(grid,button('Your slime',()=>openPage('shop'),false,'greenButton'));
+}
+function showUpgrade(id){
+ const u=E.upgrades[id],body=el('div','itemPopup'),badge=el('div','popupBadge');badge.append(icon(u.icon));const b=button('',()=>{E.accrue(meta);if(E.buy(meta,id)){sound('buy');save();renderUpgrades($('pageContent'));showUpgrade(id);updateHUD();}},false,'greenButton');b.dataset.buyUpgrade=id;
+ body.append(badge,el('b','popupLevel','Lv. '+compact(meta.upgrades[id])),el('p','popupBenefit',u.desc),b);dialog(u.name,body);liveDetail=()=>{const cost=E.upgradeCost(meta,id),max=meta.upgrades[id]>=u.max;b.textContent=max?'Max level':'Upgrade · '+compact(cost)+(u.currency==='coins'?' coins':' crystals');b.disabled=max||meta[u.currency]<cost;};liveDetail();
+}
+
+function renderResearch(root){
+ root.replaceChildren();const wallet=el('div','talentWallet');wallet.append(el('b','','✦ '+compact(meta.haven.dust)),el('span','','Stardust'));root.append(wallet);
+ const grid=el('div','upgradeGrid');for(const [id,u]of Object.entries(F.perks)){const n=button('',()=>showResearch(id,root),false,'upgradeTile');n.append(expIcon(u.icon),el('b','',u.name),el('small','','Lv. '+compact(meta.forge.perks[id])));grid.append(n);}root.append(grid);
+}
+function showResearch(id,root){
+ const u=F.perks[id],body=el('div','itemPopup'),badge=el('div','popupBadge');badge.append(expIcon(u.icon));const b=button('',()=>{F.accrue(meta);E.accrue(meta);if(F.buy(meta,id)){sound('buy');save();renderResearch(root);showResearch(id,root);updateHUD();}},false,'greenButton');b.dataset.buyResearch=id;
+ body.append(badge,el('b','popupLevel','Lv. '+compact(meta.forge.perks[id])),el('p','popupBenefit',u.desc),b);dialog(u.name,body);liveDetail=()=>{const cost=F.cost(meta,id);b.textContent='Upgrade · '+compact(cost)+' dust';b.disabled=meta.haven.dust<cost;};liveDetail();
 }

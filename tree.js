@@ -30,6 +30,14 @@ function total(m){return Math.floor(Math.max(m.best,m.run?.wave?m.run.wave-1:0)/
 function available(m){return Math.max(0,total(m)-m.tree.spent);}
 function canBuy(m,id){const n=node(id);return !!n&&(m.tree.nodes[id]||0)<n.max&&(n.parent==='core'||(m.tree.nodes[n.parent]||0)>0)&&available(m)>=price(m,id);}
 function buy(m,id){if(!canBuy(m,id))return false;const n=node(id),cost=price(m,id);m.tree.spent+=cost;m.tree.nodes[id]=(m.tree.nodes[id]||0)+1;m.tree.revision++;cache.delete(m.tree);if(n.branch===2&&m.run&&m.expedition.state!=='blocked'&&['fight','draft'].includes(m.run.phase)){m.run.maxHp++;m.run.hp++;}return true;}
+// Preflight the entire lesson. Never spend part of a price on a failed purchase.
+function buyBatch(m,ids){
+ if(!Array.isArray(ids)||!ids.length||ids.length>100)return false;
+ const owned={...m.tree.nodes};let cost=0;
+ for(const id of ids){const n=node(id),lv=owned[id]||0;if(!n||lv>=n.max||(n.parent!=='core'&&!owned[n.parent]))return false;cost+=n.cost+lv;owned[id]=lv+1;}
+ if(available(m)<cost)return false;
+ for(const id of ids)buy(m,id);return true;
+}
 function normalize(raw,m){
  const s=fresh();if(!raw||typeof raw!=='object'){s.tasks.forEach(t=>t.base=metric(m,t.kind));return s;}
  s.bonus=integer(raw.bonus);
@@ -64,5 +72,5 @@ function claim(m,slot){if(!Number.isInteger(slot)||slot<0||slot>=3)return false;
  m.tree.bonus+=3;m.haven.dust+=5+Math.floor(m.best/100);m.coins+=25+m.best*3;
  const cycles=[['kills','orders'],['merges','orders'],['stars','fish','runes']],round=t.round+1,kind=cycles[slot][round%cycles[slot].length];m.tree.tasks[slot]={kind,round,base:metric(m,kind)};return true;
 }
-const api={fresh,normalize,node,decode,price,total,available,canBuy,buy,stats,visible,branches,task,claim,metric};if(typeof module!=='undefined')module.exports=api;root.SkillTree=api;
+const api={fresh,normalize,node,decode,price,total,available,canBuy,buy,buyBatch,stats,visible,branches,task,claim,metric};if(typeof module!=='undefined')module.exports=api;root.SkillTree=api;
 })(globalThis);

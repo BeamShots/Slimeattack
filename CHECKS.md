@@ -1,12 +1,13 @@
-# Loot Legends v7.0 verification
+# Slime Heroes v8.0 verification
 
-325 automated checks passed:
+361 automated checks passed:
 
 | Area | Checks |
 | --- | ---: |
 | Number notation | 10 |
 | Equipment, victory escrow, stats, recycling and migration | 23 |
-| Skill tree, tasks and migration | 22 |
+| Existing skill paths, tasks and migration | 22 |
+| New talent lessons, hero upgrades, cosmetics, health previews and migration | 20 |
 | Extreme combat scaling | 7 |
 | Core engine | 36 |
 | Enemy and realm expansion | 24 |
@@ -15,28 +16,27 @@
 | Rune forge and research | 14 |
 | Offline progression and accounting | 22 |
 | Seeded progression/serialization simulations | 9 |
-| UI, native rendering and input simulation | 107 |
+| UI interactions and native combat raster tests | 123 |
 | Service-worker cache emulation | 1 |
 | Sound synthesis/mute | 1 |
 
-## Specific regression coverage
+## New coverage
 
-- Upgraded wormholes with remaining durations above three seconds, through 100 seconds, in every effects mode. The native renderer is also guarded against negative ellipse radii to enforce the browser Canvas contract.
-- Visible companion pixels during long wormholes; transparency/composite reset; deliberately broken-effect fallback; continuing animation scheduling; zero-client-size recovery using arena bounds; death images and direct-hit slash feedback.
-- Pending equipment cannot be banked during a fight. Manual failure discards it. Offline failure awards none, including drops already pending before departure. A won offline wave banks exactly once across reloads. Partial offline takeover keeps pending loot until a later victory.
-- Deterministic generation covers five slots, six rarities, three sets, first-drop protection and dry-streak protection. Equipped stats change real damage, health, armor mitigation, income and set bonuses. Equip/unequip cannot farm healing. Blocked-wave equipment health changes apply once on retry, including after reload.
-- Favorites and equipped items are protected; only inferior same-set Common duplicates can auto-recycle; upgrades charge essence once; malformed imported magnitudes are sanitized. Inventory ids, upgrades, favorites, equipped slots, currencies and pending-wave state survive save/load.
-- Inventory controls, strongest-piece equip, item detail actions, filtering, sorting, recycling settings, live arrival of new gear during Auto, home chest collection and task shortcuts.
-- Home has one visible scene action plus four shortcut buttons; the old dashboard container is hidden, the large heading is removed and the bottom destinations are Home/Fight/Skills/Gear/Shop.
+- The default Talents page has nine fixed cards; individual effects, costs, disabled states and affordability refresh are checked through the actual controls. Optional map navigation, pan/pinch, node purchases and saved camera still work.
+- Talent purchases use the existing nodes and caches. Keystone bundles preflight every prerequisite and total cost, with no partial spending. One hundred continuing purchases in every card category survive normalization. Health changes apply once, with blocked-wave changes deferred until retry.
+- The Slime tab has one main upgrade, three cosmetic selectors and no management-menu stack. Purchases charge the displayed cost, update level and HP, skip the capped ward, and preserve the run. Cosmetic choices save and do not alter damage. Retry-health previews match actual manual and offline retry calculations without mutating the stopped run.
+- Gear has five surrounding slots, an icon-and-level bag, contextual filters and one popup action. Equipping, upgrading, changing a slot, favorites, protected recycling, bulk-recycle cancellation, sort order and live drops are checked through UI events.
+- Research keeps its Forge tabs before and after purchases. Auto continues across the redesigned screens and normal dialogs. The original v7 Home remains scene-based with four shortcuts and one main Play action.
+- All three new shipped hero sprites are drawn through native Canvas with visible companion pixels. Existing long-wormhole, positive-radius, transparency/blend reset, broken-effect fallback, scheduling and zero-size canvas checks still pass.
 
-Existing skill-tree pan/pinch/unlock/camera checks, Auto through all activities, all-orb/final-kill collection, offline reward rollback and retries, 500 generated star puzzles and 10000 randomized forge actions still pass.
+## Existing coverage retained
 
-The cache emulator installs and serves all 27 cached URLs with network disabled. JavaScript syntax, local asset paths, flat ZIP layout, archive integrity and extracted bytes were checked.
+Core combat, all card/enemy types, village games, 500 generated star puzzles, 10000 randomized forge actions, number suffixes at extreme magnitudes, Auto/orb collection, offline rollback/retry/accounting, equipment escrow and migrations remain covered. Failed-wave equipment is not collected; won loot banks once. Previously equipped/favorited gear stays protected.
 
-## What was not verified
+The cache emulator installs and serves all 29 cached release URLs with network disabled. All JavaScript passes syntax checks. Local paths, flat ZIP layout, archive integrity and extracted bytes are checked separately during packaging.
 
-UI interaction tests use happy-dom. Combat raster tests use native canvas and the shipped artwork. They do not reproduce browser CSS layout, physical touch ergonomics, mobile audio activation, a real service-worker lifecycle, PWA installation or Android/iOS performance.
+## Verification limits
 
-An actual Chromium preview was attempted through the available desktop UI. The browser's organization policy blocked the local file URL, so no rendered browser layout verification was completed and the restriction was not bypassed. No real phone was used. Automated counts do not establish that every phone-specific issue is fixed.
+Interaction tests use happy-dom; battle raster tests use native Canvas and the shipped artwork. These tests do not establish actual browser CSS layout, physical touch ergonomics, mobile audio activation, real service-worker updates/installation or Android/iOS performance. Headless Chromium could not start because local socket creation is denied in this environment. No rendered browser layout or physical-phone playtest was completed.
 
-Suggested phone smoke test: check v7 in Settings; continue your current run; inspect long-wormhole combat; win a pending gear chest; equip/upgrade a piece; leave and return for offline gear and income; try an offline defeat/retry; reopen in airplane mode. Keep an exported save backup.
+Recommended phone check: confirm v8 in Settings, continue the same save, use Talents/Gear/Slime, win and equip gear, switch looks, leave Auto running while using menus, retry a stopped wave, then reopen in airplane mode. Keep an exported backup.

@@ -71,11 +71,11 @@ const milestones=[
  {id:'seventyfive',name:'World breaker',desc:'Clear wave 75.',goal:m=>m.best>=75,reward:{coins:2400,shards:25}},
  {id:'hundredwave',name:'Endless ascension',desc:'Clear wave 100.',goal:m=>m.best>=100,reward:{coins:4000,shards:40}}
 ];
-function fresh(now=Date.now()){return {version:1,gear:G.fresh(),tree:T.fresh(),forge:F.fresh(now),expedition:X.fresh(now),haven:H.town(),activeGuideSeen:false,coins:0,shards:0,best:0,kills:0,runs:0,upgrades:{blade:0,hull:0,pet:0,garden:0,luck:0},claimed:[],dex:{},idle:{bank:0,lastAt:now},settings:{auto:false,sound:true,music:false,haptics:true,shake:true,effects:'balanced',numbers:true},run:null};}
+function fresh(now=Date.now()){return {version:1,hero:{skin:0},gear:G.fresh(),tree:T.fresh(),forge:F.fresh(now),expedition:X.fresh(now),haven:H.town(),activeGuideSeen:false,coins:0,shards:0,best:0,kills:0,runs:0,upgrades:{blade:0,hull:0,pet:0,garden:0,luck:0},claimed:[],dex:{},idle:{bank:0,lastAt:now},settings:{auto:false,sound:true,music:false,haptics:true,shake:true,effects:'balanced',numbers:true},run:null};}
 const bound=(v,a,b)=>Number.isFinite(v)?Math.max(a,Math.min(b,v)):a;
 function normalize(raw,now=Date.now()){
  if(!raw||raw.version!==1||!raw.upgrades||!raw.idle)throw Error('This is not a Slimefall save.');
- const m=fresh(now);m.gear=G.normalize(raw.gear);m.forge=F.normalize(raw.forge,now);m.expedition=X.normalize(raw.expedition,now);m.activeGuideSeen=raw.activeGuideSeen===true;m.haven=H.normalize(raw.haven);
+ const m=fresh(now);m.hero.skin=Number.isInteger(raw.hero?.skin)&&raw.hero.skin>=0&&raw.hero.skin<3?raw.hero.skin:0;m.gear=G.normalize(raw.gear);m.forge=F.normalize(raw.forge,now);m.expedition=X.normalize(raw.expedition,now);m.activeGuideSeen=raw.activeGuideSeen===true;m.haven=H.normalize(raw.haven);
  for(const k of ['coins','shards','kills','runs'])m[k]=Math.floor(bound(raw[k],0,Number.MAX_VALUE));
  m.best=Math.floor(bound(raw.best,0,Number.MAX_SAFE_INTEGER));m.tree=T.normalize(raw.tree,{...m,run:raw.run});
  for(const k in upgrades)m.upgrades[k]=Math.floor(bound(raw.upgrades[k],0,upgrades[k].max));
@@ -567,6 +567,6 @@ function invokeRune(m,i){
  if(rank>=7){r.forgeBoost=(r.forgeBoost||0)+30+(rank-7)*30;r.energy=100;r.hp=r.maxHp;events.push({type:'soulBurst'});}
  if(!events.length)events.push({type:'pickup',kind:'rune',x:.5,y:.8});return events;
 }
-const api={power,powerLog,hitPower,ensureScale,healthCap,startingHealth,invokeRune,normalizeRun,swipe,collect,soulBurst,makeBounty,conditions,realms,enemyNames,realm,condition,waveTarget,cards,upgrades,milestones,fresh,normalize,accrue,claimIdle,idleRate,upgradeCost,buy,start,damage,drawCards,choose,reroll,spawn,attack,ability,step,claimMilestone};
+const api={previewRun:newRunData,power,powerLog,hitPower,ensureScale,healthCap,startingHealth,invokeRune,normalizeRun,swipe,collect,soulBurst,makeBounty,conditions,realms,enemyNames,realm,condition,waveTarget,cards,upgrades,milestones,fresh,normalize,accrue,claimIdle,idleRate,upgradeCost,buy,start,damage,drawCards,choose,reroll,spawn,attack,ability,step,claimMilestone};
 if(typeof module!=='undefined')module.exports=api;root.Slime=api;
 })(globalThis);

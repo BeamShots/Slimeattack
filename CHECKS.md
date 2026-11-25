@@ -1,33 +1,42 @@
-# Growing Worlds v6.0 verification
+# Loot Legends v7.0 verification
 
-287 automated checks passed:
+325 automated checks passed:
 
 | Area | Checks |
 | --- | ---: |
-| Number notation, including magnitudes beyond native numbers | 10 |
-| Hex tree, connected purchases, expanding paths, tasks and migration | 22 |
-| Extreme combat scaling and saved health ratios | 7 |
+| Number notation | 10 |
+| Equipment, victory escrow, stats, recycling and migration | 23 |
+| Skill tree, tasks and migration | 22 |
+| Extreme combat scaling | 7 |
 | Core engine | 36 |
 | Enemy and realm expansion | 24 |
 | Active combat | 29 |
-| Village games and restoration | 20 |
-| Merge forge, research and guild orders | 14 |
-| Offline simulation, rewards, retries and collection | 22 |
-| Seeded early, late and active-input progression | 9 |
-| Simulated UI, Auto and skill-tree gestures | 92 |
+| Village games | 20 |
+| Rune forge and research | 14 |
+| Offline progression and accounting | 22 |
+| Seeded progression/serialization simulations | 9 |
+| UI, native rendering and input simulation | 107 |
 | Service-worker cache emulation | 1 |
-| Web Audio synthesis/mute | 1 |
+| Sound synthesis/mute | 1 |
 
-Coverage includes synthetic migration of a v5 wave-6009 save with maxed legacy power, existing money and stardust; 600 starting tree points; prerequisite and affordability checks; three-rank forks; keystones; growing the atlas beyond its initial frontier; point overspend/orphan recovery; saved camera state; immediate live health ranks and single application of blocked-wave health upgrades; repeatable goal rewards; ongoing upgrades and evolutions.
+## Specific regression coverage
 
-Extreme-value checks simulate wave 50000, where the displayed damage and enemy health exceed 308 decimal places. They verify finite simulation values, JSON save/load, preserved health-bar ratios, stable scaling during temporary powers and correct displayed critical hits. The formatter also directly handles the requested 1.01e482-style magnitude without exponent text and checks 1000 distinct suffix tiers.
+- Upgraded wormholes with remaining durations above three seconds, through 100 seconds, in every effects mode. The native renderer is also guarded against negative ellipse radii to enforce the browser Canvas contract.
+- Visible companion pixels during long wormholes; transparency/composite reset; deliberately broken-effect fallback; continuing animation scheduling; zero-client-size recovery using arena bounds; death images and direct-hit slash feedback.
+- Pending equipment cannot be banked during a fight. Manual failure discards it. Offline failure awards none, including drops already pending before departure. A won offline wave banks exactly once across reloads. Partial offline takeover keeps pending loot until a later victory.
+- Deterministic generation covers five slots, six rarities, three sets, first-drop protection and dry-streak protection. Equipped stats change real damage, health, armor mitigation, income and set bonuses. Equip/unequip cannot farm healing. Blocked-wave equipment health changes apply once on retry, including after reload.
+- Favorites and equipped items are protected; only inferior same-set Common duplicates can auto-recycle; upgrades charge essence once; malformed imported magnitudes are sanitized. Inventory ids, upgrades, favorites, equipped slots, currencies and pending-wave state survive save/load.
+- Inventory controls, strongest-piece equip, item detail actions, filtering, sorting, recycling settings, live arrival of new gear during Auto, home chest collection and task shortcuts.
+- Home has one visible scene action plus four shortcut buttons; the old dashboard container is hidden, the large heading is removed and the bottom destinations are Home/Fight/Skills/Gear/Shop.
 
-The UI harness checks all five bottom destinations, the 180-node atlas, real unlock buttons, locked-path explanations, drag panning, pinch zoom, cancellation, zoom buttons, Center/Next path recovery, camera preservation, goal claims and Auto continuing while browsing Skills. The open tree updates earned points without resetting its camera, and Shop goals become claimable live. Existing Auto, all-orb collection, final-wave drops, saved preference, complete reload, quiet background defeat, offline retry, menus and minigames remain covered. The village suite generates 500 solvable puzzles; the forge suite executes 10000 randomized actions.
+Existing skill-tree pan/pinch/unlock/camera checks, Auto through all activities, all-orb/final-kill collection, offline reward rollback and retries, 500 generated star puzzles and 10000 randomized forge actions still pass.
 
-The service-worker emulator serves every one of its 25 cached URLs with network disabled. JavaScript syntax, local asset references, archive integrity, extracted file bytes and the flat ZIP layout were checked. The shipped CSS contains no border-image frame styling.
+The cache emulator installs and serves all 27 cached URLs with network disabled. JavaScript syntax, local asset paths, flat ZIP layout, archive integrity and extracted bytes were checked.
 
-## Limits
+## What was not verified
 
-UI tests use happy-dom and native canvas; they do not render browser CSS or verify real mobile layout, touch ergonomics, audio permissions, PWA installation or phone performance. Native canvas checks use the shipped combat artwork. Earlier Chromium launches in this environment failed because socket access was denied; no real browser launch was claimed for this release. No Android or iOS device was used.
+UI interaction tests use happy-dom. Combat raster tests use native canvas and the shipped artwork. They do not reproduce browser CSS layout, physical touch ergonomics, mobile audio activation, a real service-worker lifecycle, PWA installation or Android/iOS performance.
 
-Recommended device smoke test: verify v6, continue your save, open Skills, pan/pinch/unlock a branch, visit a mini-game with Auto on, claim a goal, leave/return for offline results, retry a defeat, and reopen offline. Keep an exported backup.
+An actual Chromium preview was attempted through the available desktop UI. The browser's organization policy blocked the local file URL, so no rendered browser layout verification was completed and the restriction was not bypassed. No real phone was used. Automated counts do not establish that every phone-specific issue is fixed.
+
+Suggested phone smoke test: check v7 in Settings; continue your current run; inspect long-wormhole combat; win a pending gear chest; equip/upgrade a piece; leave and return for offline gear and income; try an offline defeat/retry; reopen in airplane mode. Keep an exported save backup.

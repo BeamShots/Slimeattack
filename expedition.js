@@ -3,8 +3,9 @@
 (function(root){
 'use strict';
 const T=typeof module!=='undefined'?require('./tree.js'):root.SkillTree;
+const G=typeof module!=='undefined'?require('./gear.js'):root.Equipment;
 const copy=o=>JSON.parse(JSON.stringify(o));
-function fresh(now=Date.now()){return {enabled:true,state:'ready',lastAt:now,carry:0,seed:734921,trial:null,blockedWave:0,wardLevel:0,style:'balanced',report:{from:0,to:0,cleared:0,coins:0,shards:0,kills:0,failed:0,seconds:0}};}
+function fresh(now=Date.now()){return {enabled:true,state:'ready',lastAt:now,carry:0,seed:734921,trial:null,blockedWave:0,wardLevel:0,style:'balanced',report:{from:0,to:0,cleared:0,coins:0,shards:0,kills:0,failed:0,items:0,seconds:0}};}
 function normalize(raw,now=Date.now()){
  const x=fresh(now);if(!raw||typeof raw!=='object')return x;
  x.enabled=raw.enabled!==false;x.state=raw.state==='blocked'?'blocked':'ready';
@@ -34,7 +35,7 @@ function pilot(m,E,dt,random=Math.random){
  const r=m.run,events=[];if(!r||r.phase!=='fight')return events;
  events.push(...collectDrops(m,E));
  r.pilotClock=(r.pilotClock||0)+dt;
- const interval=Math.max(.08,.25/(1+.03*T.stats(m).spirit));
+ const interval=Math.max(.08,.25/(1+.03*T.stats(m).spirit)/(1+G.stats(m).speed/100));
  if(r.pilotClock>=interval){
   r.pilotClock%=interval;
   const e=r.enemies.slice().sort((a,b)=>b.y-a.y)[0];
@@ -56,7 +57,7 @@ function addElapsed(m,now=Date.now()){
 }
 function shadow(m,E){
  const x=m.expedition;
- if(!x.trial){x.wardLevel=m.upgrades.hull+m.forge.perks.ward+T.stats(m).health;x.trial={run:copy(m.run),coins:0,shards:0,kills:0};}
+ if(!x.trial){x.wardLevel=m.upgrades.hull+m.forge.perks.ward+T.stats(m).health+G.stats(m).health;x.trial={run:copy(m.run),coins:0,shards:0,kills:0};}
  const t=x.trial;
  if(!t.validated){
   try{t.run=E.normalizeRun(t.run,m);if(!['fight','draft'].includes(t.run.phase))throw Error('Invalid trial');}
@@ -73,15 +74,15 @@ function settle(m,E,F,budget=4000){
  while(x.carry>=.1-1e-8&&steps<budget){
   if(m.run.phase==='draft'&&!x.trial){E.choose(m,pick(m,E,m.run),()=>rng(x));continue;}
   const s=shadow(m,E),t=x.trial;
-  pilot(s,E,.1,()=>rng(x));E.step(s,.1,()=>rng(x));collectDrops(s,E);
+  const gearBefore=m.gear.found;pilot(s,E,.1,()=>rng(x));E.step(s,.1,()=>rng(x));collectDrops(s,E);
   t.run=s.run;t.coins=s.coins;t.shards=s.shards;t.kills=s.kills;t.best=s.best;
   x.carry=Math.max(0,x.carry-.1);x.report.seconds+=.1;steps++;
   if(t.run.phase==='over'){
-   x.state='blocked';x.blockedWave=m.run.wave;x.report.failed=m.run.wave;x.trial=null;x.carry=0;break;
+   x.state='blocked';x.blockedWave=m.run.wave;x.report.failed=m.run.wave;m.run.pendingGear=[];x.trial=null;x.carry=0;break;
   }
   if(t.run.phase==='draft'){
    const w=t.run.wave;if(!x.report.from)x.report.from=w;
-   x.report.to=w;x.report.cleared++;x.report.coins+=t.coins;x.report.kills+=t.kills;x.report.shards+=t.shards;
+   x.report.to=w;x.report.cleared++;x.report.items+=m.gear.found-gearBefore;x.report.coins+=t.coins;x.report.kills+=t.kills;x.report.shards+=t.shards;
    commit(m,t);F.wave(m,w);x.trial=null;E.choose(m,pick(m,E,m.run),()=>rng(x));
   }
  }
@@ -90,17 +91,17 @@ function settle(m,E,F,budget=4000){
 function takeControl(m){
  const x=m.expedition;if(x.trial){commit(m,x.trial);x.trial=null;}x.carry=0;x.lastAt=Date.now();
 }
-function EarlyHealth(m){return 100+T.stats(m).health;}
+function EarlyHealth(m){return 100+T.stats(m).health+G.stats(m).health;}
 function retry(m,now=Date.now()){
  const x=m.expedition;if(x.state!=='blocked'||!m.run)return false;
- const ward=m.upgrades.hull+m.forge.perks.ward+T.stats(m).health;
+ const ward=m.upgrades.hull+m.forge.perks.ward+T.stats(m).health+G.stats(m).health;
  m.run.maxHp=Math.min(EarlyHealth(m),Math.max(1,m.run.maxHp+ward-x.wardLevel));m.run.hp=m.run.maxHp;
  x.wardLevel=ward;x.state='ready';x.trial=null;x.carry=0;x.blockedWave=0;x.report=fresh().report;x.lastAt=now;return true;
 }
 function retryFallen(m,E,now=Date.now()){
  const r=m.run;if(!r||r.phase!=='over')return false;
- r.phase='fight';r.maxHp=Math.min(EarlyHealth(m),Math.max(r.maxHp,5+m.upgrades.hull+m.forge.perks.ward+T.stats(m).health));r.hp=r.maxHp;
- r.enemies=[];r.spawned=0;r.resolved=0;r.target=E.waveTarget(r.wave);r.bonusSpawned=0;r.pickups=[];r.mines=[];r.offers=[];r.spawnClock=.7;r.revives=0;r.frostCD=0;r.furyCD=0;
+ r.phase='fight';r.maxHp=Math.min(EarlyHealth(m),Math.max(r.maxHp,5+m.upgrades.hull+m.forge.perks.ward+T.stats(m).health+G.stats(m).health));r.hp=r.maxHp;
+ r.pendingGear=[];r.enemies=[];r.spawned=0;r.resolved=0;r.target=E.waveTarget(r.wave);r.bonusSpawned=0;r.pickups=[];r.mines=[];r.offers=[];r.spawnClock=.7;r.revives=0;r.frostCD=0;r.furyCD=0;
  const enabled=m.expedition.enabled,style=m.expedition.style;m.expedition=fresh(now);m.expedition.enabled=enabled;m.expedition.style=style;return true;
 }
 function resetReport(m){m.expedition.report=fresh().report;}

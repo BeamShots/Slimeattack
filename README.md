@@ -1,20 +1,34 @@
-# Slimefall · Slime Heroes v8.0
+# Slimefall · Battle Focus v8.1
 
-Equipment, Talents and Your slime now follow a character-first mobile game layout. The Home scene and your existing progress stay in place.
+The battle screen now gives most of its height to swiping and attacking. The Home scene, Talents, Slime upgrades and your progress are retained.
+
+## What changed in v8.1
+
+**Larger battlefield.** Fighting hides the separate brand/resource header, duplicate Auto status strip and full bottom navigation. A compact top bar holds Home, wave number, Auto, Menu and Pause, with health and wave-progress tracks beneath it. One bottom row holds Forge, Frost, Fury and Burst. Tap Home to return to the usual navigation; Menu contains your build, realm information, guild orders and Settings. Frost and Fury are the same Frost nova and Overcharge powers with shorter button labels.
+
+The normal battle chrome uses about 79 CSS pixels above the arena and 80 below it, before device safe-area insets. This is a layout budget, not a measured phone screenshot. The field flexes to use the remaining height, including when the mobile browser changes size. A resize cancels a held gesture safely. The optional Forge floats over the field and no longer shrinks it.
+
+**Cleaner feedback.** Burst charge fills its own button. The separate energy strip and helper-text row are gone. Energy pickups still grant their normal charge, with no repeated +ENERGY labels. Damage labels are smaller and placed on separate rows. Powers, enemies, long wormholes and damage calculations are unchanged.
+
+**A safe wave chest.** The small pending-gear button previews drops without equipping or banking them early. Its status updates if Auto wins or loses while the preview is open. Victory still collects every pending item automatically; a lost wave does not award its pending drops.
+
+**Clear equipment counters.** Total equipment is now labeled “N / 5 slots filled.” Set bonuses have a separate view showing Woodland, Ember and Crystal together. Item details show the named set, actual matching equipped pieces, the bonus, and the result if the inspected item replaces your current item. Three matching pieces activate a set bonus; the count can show four or five without hiding the real number. Replacing a sword changes one slot, so it may reduce one family's count and increase another while total filled slots stays the same. Inspecting an item never counts as equipping it.
+
+All set counters and bonuses read the same distinct equipped slots. Save/load, swapping families and deactivating/reactivating bonuses are covered by regression checks.
 
 ## Upload from your phone
 
 1. Export your save in Settings as a backup.
 2. Extract this ZIP. Upload **all 32 files together beside index.html**, replacing the old files in the same repository directory. There are no asset folders.
 3. Wait for GitHub Pages to publish. Open your usual game address online once, close older game tabs/app windows, then reopen.
-4. Check Settings for **Slime Heroes · v8.0.0**. Settings also has “Check for game update”.
+4. Check Settings for **Battle Focus · v8.1.0**. Settings also has “Check for game update”.
 
 Use the same website path to keep your save. Do not clear website storage. Upload the extracted files, not the ZIP itself.
 
 ## The five bottom buttons
 
 - **Home:** your scene, Play, mini-games, idle chest and tasks.
-- **Fight:** your current battle or retry screen.
+- **Fight:** your current battle or retry screen. The full navigation is hidden during combat; tap the top Home button to return.
 - **Talents:** nine large talent buttons. Tap one, see the effect and price, then Learn.
 - **Gear:** your slime with five surrounding slots and an icon-based bag.
 - **Slime:** character level, attack, health and one large Upgrade slime button.

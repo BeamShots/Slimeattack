@@ -4,7 +4,7 @@
 const slots=['sword','chest','helmet','ring','boots'];
 const slotNames={sword:'Sword',chest:'Chest armor',helmet:'Helmet',ring:'Ring',boots:'Boots'};
 const rarities=[{name:'Common',color:'#a3b2aa'},{name:'Uncommon',color:'#7dbb82'},{name:'Rare',color:'#60aeda'},{name:'Epic',color:'#b38cdb'},{name:'Legendary',color:'#efb44f'},{name:'Mythic',color:'#e67e99'}];
-const sets=[{name:'Woodland',desc:'3 pieces: +25% income'},{name:'Ember',desc:'3 pieces: +30% strength'},{name:'Crystal',desc:'3 pieces: +15% speed'}];
+const sets=[{name:'Woodland',bonus:'+25% coins',desc:'3 pieces: +25% income'},{name:'Ember',bonus:'+30% attack',desc:'3 pieces: +30% strength'},{name:'Crystal',bonus:'+15% speed',desc:'3 pieces: +15% speed'}];
 const cache=new WeakMap();
 function fresh(){return {items:[],equipped:Object.fromEntries(slots.map(s=>[s,null])),scrap:0,nextId:1,found:0,recycled:0,unseen:0,autoRecycle:true,revision:0};}
 const num=(n,d=0)=>Number.isFinite(n)?Math.max(0,n):d;
@@ -25,11 +25,16 @@ function statsFor(i){
  if(i.slot==='boots'){s.speed=2*multiplier;s.income=3*multiplier;}
  return s;
 }
+function equippedItems(m,previewId){
+ const preview=m.gear.items.find(i=>i.id===previewId);
+ return slots.map(slot=>{const id=preview?.slot===slot?preview.id:m.gear.equipped[slot];return m.gear.items.find(i=>i.id===id&&i.slot===slot);}).filter(Boolean);
+}
+function setProgress(m,set,previewId){const def=sets[set];if(!def)return null;const pieces=equippedItems(m,previewId).filter(i=>i.set===set);return {id:set,name:def.name,bonus:def.bonus,count:pieces.length,required:3,active:pieces.length>=3,pieces};}
 function stats(m){
  const g=m.gear;if(!g)return {strength:0,health:0,armor:0,income:0,speed:0,luck:0,reduction:0,sets:[0,0,0]};
  const old=cache.get(g);if(old?.revision===g.revision)return old.value;
  const s={strength:0,health:0,armor:0,income:0,speed:0,luck:0,reduction:0,sets:[0,0,0]};
- for(const slot of slots){const i=g.items.find(i=>i.id===g.equipped[slot]);if(!i)continue;const values=statsFor(i);for(const k in values)s[k]+=values[k];s.sets[i.set]++;}
+ for(const i of equippedItems(m)){const values=statsFor(i);for(const k in values)s[k]+=values[k];s.sets[i.set]++;}
  if(s.sets[0]>=3)s.income+=25;if(s.sets[1]>=3)s.strength+=30;if(s.sets[2]>=3)s.speed+=15;
  s.reduction=Math.min(.6,s.armor/(100+s.armor));cache.set(g,{revision:g.revision,value:s});return s;
 }
@@ -66,5 +71,5 @@ function recycleExtras(m){
 }
 function cost(i){return Math.ceil((3+i.tier)*Math.pow(i.level+1,1.6)*(1+i.rarity*.3));}
 function upgrade(m,id){const i=m.gear.items.find(i=>i.id===id);if(!i||m.gear.scrap<cost(i))return false;const old=stats(m).health;m.gear.scrap-=cost(i);i.level++;m.gear.revision++;refreshHealth(m,old);return true;}
-const api={slots,slotNames,rarities,sets,fresh,normalize,item,stats,statsFor,roll,bank,score,equip,unequip,equipBest,favorite,recycle,recycleExtras,recycleValue,cost,upgrade};if(typeof module!=='undefined')module.exports=api;root.Equipment=api;
+const api={slots,slotNames,rarities,sets,fresh,normalize,item,equippedItems,setProgress,stats,statsFor,roll,bank,score,equip,unequip,equipBest,favorite,recycle,recycleExtras,recycleValue,cost,upgrade};if(typeof module!=='undefined')module.exports=api;root.Equipment=api;
 })(globalThis);
